@@ -2,9 +2,9 @@ import { useState } from 'react';
 import type { Sync } from './useGameSync';
 
 const PHASE_LABEL: Record<string, string> = {
-  focus: 'Concentration',
-  short: 'Pause courte',
-  long: 'Pause longue',
+  focus: 'Focus',
+  short: 'Short break',
+  long: 'Long break',
 };
 
 function fmt(total: number) {
@@ -53,7 +53,7 @@ export function Pomodoro({ sync }: { sync: Sync }) {
         </svg>
         <div className="ring-center">
           <div className="time serif">{fmt(p.secondsLeft)}</div>
-          <div className="cycles muted">Cycles : {p.completedFocus}</div>
+          <div className="cycles muted">Cycles: {p.completedFocus}</div>
         </div>
       </div>
 
@@ -64,38 +64,38 @@ export function Pomodoro({ sync }: { sync: Sync }) {
           </button>
         ) : (
           <button className="btn btn-primary" onClick={sync.pomo.start}>
-            Démarrer
+            Start
           </button>
         )}
         <button className="btn btn-ghost" onClick={sync.pomo.reset}>
-          Réinitialiser
+          Reset
         </button>
         <button className="btn btn-ghost" onClick={sync.pomo.skip}>
-          Passer ›
+          Skip ›
         </button>
         <button className="btn btn-ghost" onClick={() => setOpen((o) => !o)}>
-          ⚙ Réglages
+          ⚙ Settings
         </button>
       </div>
 
       {open && (
         <div className="panel settings">
-          <h3 className="serif">Durées (minutes)</h3>
+          <h3 className="serif">Durations (minutes)</h3>
           <div className="grid">
             <label>
-              Concentration
+              Focus
               <input type="number" min={1} max={180} value={focus} onChange={(e) => setFocus(+e.target.value)} />
             </label>
             <label>
-              Pause courte
+              Short break
               <input type="number" min={1} max={60} value={short} onChange={(e) => setShort(+e.target.value)} />
             </label>
             <label>
-              Pause longue
+              Long break
               <input type="number" min={1} max={120} value={long} onChange={(e) => setLong(+e.target.value)} />
             </label>
             <label>
-              Pause longue toutes les
+              Long break every
               <input
                 type="number"
                 min={1}
@@ -106,9 +106,9 @@ export function Pomodoro({ sync }: { sync: Sync }) {
             </label>
           </div>
           <button className="btn btn-primary" onClick={save}>
-            Appliquer
+            Apply
           </button>
-          <p className="muted small">S'applique pour tout le salon.</p>
+          <p className="muted small">Applies to the whole room.</p>
         </div>
       )}
     </div>

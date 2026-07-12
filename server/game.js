@@ -106,15 +106,15 @@ export function submitWord(b, dict, syllables, playerId, raw, now = Date.now()) 
   const word = normWord(raw || '');
   if (!word) return false;
   if (!word.includes(b.syllable)) {
-    b.message = `Le mot doit contenir « ${b.syllable} »`;
+    b.message = `The word must contain “${b.syllable}”`;
     return false;
   }
   if (b.used.has(word)) {
-    b.message = 'Mot déjà utilisé !';
+    b.message = 'Word already used!';
     return false;
   }
   if (!dict.has(word)) {
-    b.message = `« ${String(raw).trim()} » n'est pas dans le dictionnaire`;
+    b.message = `“${String(raw).trim()}” isn't in the dictionary`;
     return false;
   }
   b.used.add(word);
@@ -131,13 +131,13 @@ export function timeoutTick(b, syllables, nameOf, now = Date.now()) {
   if (b.phase !== 'playing' || !b.turnEndsAt || now < b.turnEndsAt) return false;
   const cur = b.order[b.turnIdx];
   if (b.solo) {
-    b.message = '💥 Raté !';
+    b.message = '💥 Missed!';
     b.syllable = pickSyllable(syllables);
     b.turnEndsAt = now + b.turnMs;
     return true;
   }
   b.lives[cur] = Math.max(0, (b.lives[cur] || 0) - 1);
-  b.message = `💥 Temps écoulé pour ${nameOf(cur)}`;
+  b.message = `💥 Time's up for ${nameOf(cur)}`;
   if (b.lives[cur] <= 0) b.alive[cur] = false;
   const remaining = b.order.filter((id) => b.alive[id]);
   if (remaining.length <= 1) {

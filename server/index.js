@@ -107,7 +107,7 @@ function getInstance(id) {
 }
 
 const players = (inst) => [...inst.sockets.values()].filter((p) => p && p.id);
-const nameOf = (inst, id) => players(inst).find((p) => p.id === id)?.name ?? 'Joueur';
+const nameOf = (inst, id) => players(inst).find((p) => p.id === id)?.name ?? 'Player';
 
 function bombView(inst) {
   const b = inst.bomb;
@@ -213,7 +213,7 @@ function applyCommand(inst, ws, cmd) {
     case 'hello':
       inst.sockets.set(ws, {
         id: String(cmd.id ?? `guest-${Math.random().toString(36).slice(2, 8)}`),
-        name: String(cmd.name ?? 'Joueur').slice(0, 32),
+        name: String(cmd.name ?? 'Player').slice(0, 32),
       });
       break;
     case 'view':

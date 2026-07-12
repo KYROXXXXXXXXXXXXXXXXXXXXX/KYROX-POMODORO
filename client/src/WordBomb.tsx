@@ -39,11 +39,11 @@ export function WordBomb({ sync, me }: { sync: Sync; me: Me }) {
     return (
       <div className="screen bomb">
         <h2 className="serif title">Word Bomb</h2>
-        <p className="muted">Trouve un mot contenant la syllabe avant l'explosion. Dernier survivant gagne.</p>
+        <p className="muted">Find a word containing the syllable before the bomb explodes. Last one standing wins.</p>
 
         <div className="panel">
           <div className="seats">
-            {b.seats.length === 0 && <p className="muted">En attente de joueurs…</p>}
+            {b.seats.length === 0 && <p className="muted">Waiting for players…</p>}
             {b.seats.map((s) => (
               <div key={s.id} className="seat">
                 <span className="seat-name">{s.name}</span>
@@ -52,7 +52,7 @@ export function WordBomb({ sync, me }: { sync: Sync; me: Me }) {
           </div>
           <div className="grid two">
             <label>
-              Secondes par tour
+              Seconds per turn
               <input
                 type="number"
                 min={5}
@@ -62,7 +62,7 @@ export function WordBomb({ sync, me }: { sync: Sync; me: Me }) {
               />
             </label>
             <label>
-              Vies par joueur
+              Lives per player
               <input type="number" min={1} max={5} value={lives} onChange={(e) => setLives(+e.target.value)} />
             </label>
           </div>
@@ -70,9 +70,9 @@ export function WordBomb({ sync, me }: { sync: Sync; me: Me }) {
             className="btn btn-primary big"
             onClick={() => sync.bomb.start({ turnSeconds, lives })}
           >
-            💣 Lancer la partie
+            💣 Start game
           </button>
-          <p className="muted small">2 joueurs ou plus recommandé · à 1 joueur c'est un mode entraînement.</p>
+          <p className="muted small">2+ players recommended · solo is practice mode.</p>
         </div>
       </div>
     );
@@ -85,13 +85,13 @@ export function WordBomb({ sync, me }: { sync: Sync; me: Me }) {
       <div className="screen bomb center">
         <div className="panel narrow trophy">
           <div className="big-emoji">🏆</div>
-          <h2 className="serif">{winner ? `${winner.name} remporte la partie !` : 'Partie terminée'}</h2>
+          <h2 className="serif">{winner ? `${winner.name} wins the game!` : 'Game over'}</h2>
           <div className="controls">
             <button className="btn btn-primary" onClick={() => sync.bomb.start({ turnSeconds, lives })}>
-              Rejouer
+              Play again
             </button>
             <button className="btn btn-ghost" onClick={sync.bomb.reset}>
-              Salon d'attente
+              Back to lobby
             </button>
           </div>
         </div>
@@ -130,9 +130,9 @@ export function WordBomb({ sync, me }: { sync: Sync; me: Me }) {
 
       <div className="turn-line">
         {myTurn ? (
-          <strong className="your-turn">À toi de jouer&nbsp;!</strong>
+          <strong className="your-turn">Your turn!</strong>
         ) : (
-          <span className="muted">Au tour de {current?.name ?? '…'}</span>
+          <span className="muted">{current?.name ?? '…'}'s turn</span>
         )}
       </div>
 
@@ -142,21 +142,21 @@ export function WordBomb({ sync, me }: { sync: Sync; me: Me }) {
           className="word-input"
           value={word}
           disabled={!myTurn}
-          placeholder={myTurn ? `un mot avec « ${b.syllable} »` : 'patiente…'}
+          placeholder={myTurn ? `a word with “${b.syllable}”` : 'wait…'}
           onChange={(e) => setWord(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') submit();
           }}
         />
         <button className="btn btn-primary" disabled={!myTurn} onClick={submit}>
-          Envoyer
+          Submit
         </button>
       </div>
 
       <div className={`msg ${b.message ? 'show' : ''}`}>{b.message ?? '\u00a0'}</div>
       {b.lastWord && (
         <div className="last-word muted">
-          Dernier mot accepté&nbsp;: <em>{b.lastWord}</em>
+          Last accepted word: <em>{b.lastWord}</em>
         </div>
       )}
 

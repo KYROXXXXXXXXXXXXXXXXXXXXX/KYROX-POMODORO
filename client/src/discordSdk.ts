@@ -52,6 +52,6 @@ export async function authenticateUser(): Promise<Me> {
   const u = auth?.user ?? {};
   return {
     id: String(u.id ?? getInstanceId()),
-    name: String(u.global_name || u.username || 'Invité'),
+    name: String(u.global_name || u.username || 'Guest'),
   };
 }

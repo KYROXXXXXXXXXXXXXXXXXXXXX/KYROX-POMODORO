@@ -481,11 +481,621 @@ input:focus,
   font-size: 48px;
 }
 
+/* ---- Intro cinématique (canvas) ------------------------------------------ */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #070308;
+  overflow: hidden;
+}
+.intro-video,
+.intro-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.intro-video {
+  object-fit: cover;
+}
+.intro-skip {
+  position: absolute;
+  right: 22px;
+  bottom: 20px;
+  z-index: 2;
+  background: rgba(216, 216, 222, 0.08);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--silver-dim);
+  font-size: 13px;
+  padding: 8px 14px;
+  cursor: pointer;
+  opacity: 0;
+  animation: fade-in 0.5s ease forwards;
+}
+.intro-skip:hover {
+  color: var(--silver-bright);
+  border-color: var(--line-strong);
+}
+@keyframes fade-in {
+  to {
+    opacity: 1;
+  }
+}
+
+/* ---- Onboarding Kyrox --------------------------------------------------- */
+.onboard {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 50% -10%, #5a1626 0%, var(--maroon) 42%, var(--maroon-deep) 100%);
+}
+.onboard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(closest-side, transparent 55%, rgba(216, 216, 222, 0.05) 56%, transparent 60%)
+    center/720px 720px no-repeat;
+  pointer-events: none;
+}
+.kyrox-wrap {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 340px;
+  transform: translate(-50%, -50%);
+  transition: left 0.9s cubic-bezier(0.5, 1.3, 0.4, 1), top 0.9s cubic-bezier(0.5, 1.3, 0.4, 1);
+}
+.spot-center {
+  left: 50%;
+  top: 46%;
+}
+.spot-left {
+  left: 30%;
+  top: 52%;
+}
+.spot-right {
+  left: 70%;
+  top: 44%;
+}
+.spot-bottom-left {
+  left: 28%;
+  top: 60%;
+}
+
+.bubble {
+  position: relative;
+  background: linear-gradient(180deg, var(--maroon-soft), var(--maroon));
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  padding: 14px 18px;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--silver-bright);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  min-width: 250px;
+  min-height: 48px;
+  text-align: center;
+  animation: bubble-pop 0.35s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+.bubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 12px;
+  height: 12px;
+  transform: translateX(-50%) rotate(45deg);
+  background: var(--maroon);
+  border-right: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+}
+@keyframes bubble-pop {
+  from {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+}
+.caret {
+  animation: caret-blink 0.8s steps(1) infinite;
+  color: var(--silver-dim);
+}
+@keyframes caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.k-stage {
+  position: relative;
+  width: 190px;
+  height: 200px;
+}
+.k-glow {
+  position: absolute;
+  inset: -30%;
+  background: radial-gradient(circle at 50% 45%, rgba(216, 130, 150, 0.22), transparent 60%);
+  filter: blur(6px);
+  pointer-events: none;
+}
+.kyrox {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  animation: kyrox-idle 3.4s ease-in-out infinite;
+}
+.kyrox.poked {
+  animation: kyrox-bounce 0.55s cubic-bezier(0.3, 1.6, 0.4, 1),
+    kyrox-idle 3.4s ease-in-out 0.55s infinite;
+}
+.k-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.5));
+}
+.k-brow {
+  fill: none;
+  stroke: #1d1524;
+  stroke-width: 3.4;
+  stroke-linecap: round;
+}
+.k-eye-closed {
+  fill: none;
+  stroke: #221822;
+  stroke-width: 3.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.k-mouth {
+  fill: none;
+  stroke: #8e3540;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+}
+.k-blink {
+  transform-origin: 100px 114px;
+  animation: k-blink 4.4s infinite;
+}
+@keyframes k-blink {
+  0%,
+  93%,
+  100% {
+    transform: scaleY(1);
+  }
+  95.5% {
+    transform: scaleY(0.08);
+  }
+}
+.k-arm {
+  transform-origin: 140px 160px;
+}
+.k-arm.wave {
+  animation: k-wave 0.9s ease-in-out infinite;
+}
+@keyframes k-wave {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(16deg);
+  }
+}
+@keyframes kyrox-idle {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+@keyframes kyrox-bounce {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.16, 0.88) rotate(-4deg);
+  }
+  70% {
+    transform: scale(0.92, 1.1) rotate(3deg);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.poke-stars {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  pointer-events: none;
+}
+.poke-stars i {
+  position: absolute;
+  font-style: normal;
+  color: #f4e3b2;
+  text-shadow: 0 0 8px rgba(244, 227, 178, 0.8);
+  animation: star-fly 0.9s ease-out forwards;
+}
+.poke-stars i:nth-child(1) {
+  --dx: -34px;
+  font-size: 15px;
+}
+.poke-stars i:nth-child(2) {
+  --dx: 2px;
+  font-size: 19px;
+  animation-delay: 0.06s;
+}
+.poke-stars i:nth-child(3) {
+  --dx: 36px;
+  font-size: 13px;
+  animation-delay: 0.12s;
+}
+@keyframes star-fly {
+  from {
+    transform: translate(0, 0) scale(0.4);
+    opacity: 1;
+  }
+  to {
+    transform: translate(var(--dx), -46px) scale(1);
+    opacity: 0;
+  }
+}
+.kyrox-name {
+  font-size: 14px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--silver-dim);
+}
+.onboard-dots {
+  position: absolute;
+  bottom: 78px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+}
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(216, 216, 222, 0.18);
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+.dot.on {
+  background: var(--focus);
+  transform: scale(1.15);
+}
+.onboard-controls {
+  position: absolute;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+}
+
+/* ---- Dashboard zones ----------------------------------------------------- */
+.dashboard {
+  gap: 24px;
+}
+.zone {
+  position: relative;
+  width: 100%;
+  max-width: 660px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(0, 0, 0, 0.14));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 14px 34px rgba(0, 0, 0, 0.3);
+  animation: rise-in 0.55s ease both;
+}
+.zone:nth-of-type(1) {
+  --accent: var(--focus);
+  --accent-soft: rgba(231, 201, 160, 0.16);
+}
+.zone:nth-of-type(2) {
+  --accent: #ff97a5;
+  --accent-soft: rgba(255, 151, 165, 0.14);
+  animation-delay: 0.12s;
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+.zone-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0;
+  font-size: 16px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent, var(--silver-dim));
+}
+.zone-title::before,
+.zone-title::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(90deg, transparent, var(--line-strong));
+}
+.zone-title::after {
+  background: linear-gradient(90deg, var(--line-strong), transparent);
+}
+.menu.three {
+  grid-template-columns: repeat(3, 1fr);
+  max-width: none;
+  gap: 12px;
+}
+.game-card {
+  position: relative;
+  overflow: hidden;
+}
+.game-card:not(.locked):hover {
+  border-color: var(--accent, var(--line-strong));
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.45), 0 0 26px var(--accent-soft, transparent);
+}
+.game-card:not(.locked):hover .gc-icon {
+  transform: scale(1.12) translateY(-2px);
+}
+.gc-icon {
+  width: 58px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 27px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.2));
+  transition: transform 0.18s ease;
+}
+.game-card.locked {
+  opacity: 0.55;
+  cursor: default;
+}
+.game-card.locked:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--line);
+}
+.game-card.locked::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 42%, rgba(255, 255, 255, 0.06) 50%, transparent 58%);
+  transform: translateX(-100%);
+  animation: card-shimmer 3.4s ease-in-out infinite;
+}
+@keyframes card-shimmer {
+  55%,
+  100% {
+    transform: translateX(100%);
+  }
+}
+.gc-lock {
+  font-size: 11px;
+  color: var(--silver-dim);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 10px;
+  margin-top: 4px;
+}
+
+/* ---- Wandering companion ---------------------------------------------------- */
+.companion {
+  position: fixed;
+  bottom: 12px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  pointer-events: none;
+}
+.companion.flip {
+  align-items: flex-start;
+}
+.companion .kyrox,
+.companion .bubble {
+  pointer-events: auto;
+}
+.k-stage.mini {
+  width: 92px;
+  height: 96px;
+}
+.bubble.mini {
+  font-size: 13px;
+  padding: 10px 14px;
+  min-width: 0;
+  min-height: 0;
+  max-width: 240px;
+  text-align: left;
+  animation: bubble-pop 0.3s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+.bubble.mini::after {
+  left: auto;
+  right: 30px;
+}
+.companion.flip .bubble.mini::after {
+  right: auto;
+  left: 30px;
+}
+
+/* Scampering: hops while the wrapper slides, leaning into the direction. */
+.kyrox.run {
+  animation: run-hop 0.36s linear infinite;
+}
+.kyrox.run .k-svg {
+  transform: rotate(calc(var(--dir, 1) * 5deg));
+}
+@keyframes run-hop {
+  0%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  30% {
+    transform: translateY(-11px) scale(0.98, 1.04);
+  }
+  60% {
+    transform: translateY(0) scale(1.05, 0.94);
+  }
+}
+/* Little head-bob while he talks. */
+.kyrox.talk .k-svg {
+  animation: talk-bob 0.55s ease-in-out infinite;
+}
+@keyframes talk-bob {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(1.8deg);
+  }
+}
+/* Onboarding: double hop when he moves to a new spot. */
+.kyrox-wrap.travel .kyrox {
+  animation: hop 0.47s ease-in-out 2;
+}
+@keyframes hop {
+  0%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  35% {
+    transform: translateY(-16px) scale(0.97, 1.05);
+  }
+  70% {
+    transform: translateY(0) scale(1.06, 0.92);
+  }
+}
+/* Sleeping: floating z z z */
+.zzz {
+  position: relative;
+  height: 26px;
+  width: 40px;
+  margin-right: 30px;
+  pointer-events: none;
+}
+.companion.flip .zzz {
+  margin-right: 0;
+  margin-left: 30px;
+}
+.zzz i {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  font-style: normal;
+  font-family: var(--serif);
+  font-size: 15px;
+  color: var(--silver-dim);
+  opacity: 0;
+  animation: zzz-float 2.4s ease-in infinite;
+}
+.zzz i:nth-child(2) {
+  animation-delay: 0.8s;
+  font-size: 12px;
+}
+.zzz i:nth-child(3) {
+  animation-delay: 1.6s;
+  font-size: 10px;
+}
+@keyframes zzz-float {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  20% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-16px, -30px);
+  }
+}
+/* Tail: organic multi-stage sway. Ears twitch now and then. */
+.k-tail {
+  transform-origin: 150px 180px;
+  animation: tail-sway 4.2s ease-in-out infinite;
+}
+@keyframes tail-sway {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  30% {
+    transform: rotate(-12deg);
+  }
+  55% {
+    transform: rotate(-3deg);
+  }
+  75% {
+    transform: rotate(-14deg);
+  }
+}
+.k-ear-l {
+  transform-origin: 66px 52px;
+  animation: ear-twitch 6.5s infinite;
+}
+.k-ear-r {
+  transform-origin: 134px 52px;
+  animation: ear-twitch 8.2s 1.2s infinite;
+}
+@keyframes ear-twitch {
+  0%,
+  90%,
+  100% {
+    transform: rotate(0deg);
+  }
+  93% {
+    transform: rotate(-9deg);
+  }
+  96% {
+    transform: rotate(4deg);
+  }
+}
+
+/* ---- Polish global -------------------------------------------------------- */
+.pomo .ring-fill {
+  filter: drop-shadow(0 0 10px var(--phase-color, rgba(231, 201, 160, 0.5)));
+}
+.time {
+  text-shadow: 0 0 30px rgba(244, 244, 247, 0.18);
+}
+
 @media (max-width: 480px) {
-  .menu {
+  .menu,
+  .menu.three {
     grid-template-columns: 1fr;
   }
   .time {
     font-size: 52px;
+  }
+  .kyrox-wrap {
+    max-width: 280px;
+  }
+  .spot-left,
+  .spot-bottom-left {
+    left: 42%;
+  }
+  .spot-right {
+    left: 58%;
   }
 }
