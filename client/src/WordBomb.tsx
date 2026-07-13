@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { BombDifficulty, BombLang, BombState, Sync } from './useGameSync';
+import type { BombDifficulty, BombLang, BombState, ChatMsg, Sync } from './useGameSync';
 import type { Me } from './discordSdk';
 
 const LANGS: { id: BombLang; flag: string; label: string }[] = [
@@ -113,9 +113,8 @@ function Arena({ b, me }: { b: BombState & { secondsLeft: number }; me: Me }) {
   );
 }
 
-function Chat({ sync, me }: { sync: Sync; me: Me }) {
+function Chat({ chat, me, onSend }: { chat: ChatMsg[]; me: Me; onSend: (t: string) => void }) {
   const [text, setText] = useState('');
-  const chat = sync.snap!.chat;
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -126,7 +125,7 @@ function Chat({ sync, me }: { sync: Sync; me: Me }) {
   const send = () => {
     const t = text.trim();
     if (!t) return;
-    sync.chat.send(t);
+    onSend(t);
     setText('');
   };
 
@@ -169,23 +168,26 @@ function Chat({ sync, me }: { sync: Sync; me: Me }) {
   );
 }
 
-export function WordBomb({ sync, me, onLeave }: { sync: Sync; me: Me; onLeave: () => void }) {
-  const b = sync.snap!.bomb;
+export function WordBomb({ sync, me }: { sync: Sync; me: Me }) {
+  const snap = sync.snap!;
+  const room = snap.room;
+  const b = room?.bomb;
   const [word, setWord] = useState('');
-  const [turnSeconds, setTurnSeconds] = useState(Math.round(b.turnMs / 1000));
-  const [lives, setLives] = useState(b.startLives);
-  const [lang, setLang] = useState<BombLang>(b.lang || 'en');
-  const [difficulty, setDifficulty] = useState<BombDifficulty>(b.difficulty || 'easy');
+  const [roomName, setRoomName] = useState('');
+  const [turnSeconds, setTurnSeconds] = useState(12);
+  const [lives, setLives] = useState(2);
+  const [lang, setLang] = useState<BombLang>('en');
+  const [difficulty, setDifficulty] = useState<BombDifficulty>('easy');
   const inputRef = useRef<HTMLInputElement>(null);
 
   const startOpts = { turnSeconds, lives, lang, difficulty };
-  const myTurn = b.phase === 'playing' && b.currentId === me.id;
+  const myTurn = !!b && b.phase === 'playing' && b.currentId === me.id;
 
   // Focus the field when it becomes my turn; clear leftovers when it isn't.
   useEffect(() => {
     if (myTurn) inputRef.current?.focus();
     else setWord('');
-  }, [myTurn, b.currentId]);
+  }, [myTurn, b?.currentId]);
 
   const submit = () => {
     const w = word.trim();
@@ -194,10 +196,59 @@ export function WordBomb({ sync, me, onLeave }: { sync: Sync; me: Me; onLeave: (
     setWord('');
   };
 
-  const leaveGame = () => {
-    sync.bomb.leave();
-    onLeave();
-  };
+  // ---- Room browser (no room joined yet) -----------------------------------
+  if (!room || !b) {
+    return (
+      <div className="screen bomb">
+        <h2 className="serif title">Word Bomb</h2>
+        <p className="muted">Create a room and invite your friends, or join one below.</p>
+
+        <div className="create-row">
+          <input
+            className="word-input"
+            value={roomName}
+            maxLength={24}
+            placeholder={`${me.name}'s room`}
+            onChange={(e) => setRoomName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') sync.room.create(roomName);
+            }}
+          />
+          <button className="btn btn-primary" onClick={() => sync.room.create(roomName)}>
+            ➕ Create Room
+          </button>
+        </div>
+
+        <div className="rooms">
+          {snap.rooms.length === 0 && (
+            <p className="muted small center-text">No rooms yet — create the first one!</p>
+          )}
+          {snap.rooms.map((r) => {
+            const flag = LANGS.find((l) => l.id === r.lang)?.flag ?? '🌍';
+            return (
+              <div key={r.id} className="room-row">
+                <div className="room-name">
+                  {r.name}
+                  <span className="room-meta">
+                    <span className="badge">{flag}</span>
+                    <span className="badge">
+                      👥 {r.players}/16
+                    </span>
+                    <span className={`badge ${r.phase === 'playing' ? 'live' : ''}`}>
+                      {r.phase === 'playing' ? 'Started' : r.phase === 'over' ? 'Finished' : 'Waiting'}
+                    </span>
+                  </span>
+                </div>
+                <button className="btn btn-primary" onClick={() => sync.room.join(r.id)}>
+                  Join
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
   const langInfo = LANGS.find((l) => l.id === b.lang);
 
@@ -206,7 +257,6 @@ export function WordBomb({ sync, me, onLeave }: { sync: Sync; me: Me; onLeave: (
     // ---- Lobby -------------------------------------------------------------
     main = (
       <>
-        <h2 className="serif title">Word Bomb</h2>
         <p className="muted">
           Find a word containing the syllable before the bomb explodes. Last one standing wins.
         </p>
@@ -297,16 +347,11 @@ export function WordBomb({ sync, me, onLeave }: { sync: Sync; me: Me; onLeave: (
     const current = b.seats.find((s) => s.id === b.currentId);
     main = (
       <>
-        <div className="bomb-top">
-          <div className="bomb-badges">
-            <span className="badge">
-              {langInfo?.flag} {langInfo?.label}
-            </span>
-            <span className="badge">{LEVEL_LABEL[b.level] ?? LEVEL_LABEL[0]}</span>
-          </div>
-          <button className="btn btn-mini leave-btn" onClick={leaveGame}>
-            🚪 Leave
-          </button>
+        <div className="bomb-badges">
+          <span className="badge">
+            {langInfo?.flag} {langInfo?.label}
+          </span>
+          <span className="badge">{LEVEL_LABEL[b.level] ?? LEVEL_LABEL[0]}</span>
         </div>
 
         <TypingStrip text={myTurn ? word : b.typing} syllable={b.syllable} />
@@ -353,9 +398,18 @@ export function WordBomb({ sync, me, onLeave }: { sync: Sync; me: Me; onLeave: (
 
   return (
     <div className="screen bomb">
+      <div className="room-head">
+        <div className="room-title-wrap">
+          <span className="room-title serif">{room.name}</span>
+          <span className="badge">👥 {room.members.length}/16</span>
+        </div>
+        <button className="btn btn-mini leave-btn" onClick={sync.room.leave}>
+          🚪 Leave room
+        </button>
+      </div>
       <div className="bomb-layout">
         <div className="bomb-main">{main}</div>
-        <Chat sync={sync} me={me} />
+        <Chat chat={room.chat} me={me} onSend={sync.chat.send} />
       </div>
     </div>
   );

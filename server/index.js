@@ -90,16 +90,18 @@ app.use(express.static(clientDist));
 app.get('*', (_req, res) => res.sendFile(path.join(clientDist, 'index.html')));
 
 // ===========================================================================
-// Shared per-instance state: menu + Pomodoro + Word Bomb per Activity
+// Shared per-instance state: Pomodoro (whole channel) + Word Bomb rooms
 // ===========================================================================
 const POMO_DEFAULTS = { durations: { focus: 25 * 60, short: 5 * 60, long: 15 * 60 }, longEvery: 4 };
+const CHAT_MAX = 60;
+const ROOM_MAX_PLAYERS = 16;
+const ROOMS_MAX = 20;
 
 /** @type {Map<string, any>} */
 const instances = new Map();
 
 function freshInstance() {
   return {
-    chat: [], // last CHAT_MAX messages, shared by the whole room
     pomo: {
       mode: 'focus',
       running: false,
@@ -109,12 +111,10 @@ function freshInstance() {
       durations: { ...POMO_DEFAULTS.durations },
       longEvery: POMO_DEFAULTS.longEvery,
     },
-    bomb: freshBomb(),
-    sockets: new Map(), // ws -> { id, name }
+    rooms: new Map(), // roomId -> { id, name, hostId, bomb, chat }
+    sockets: new Map(), // ws -> { id, name, roomId } | null until 'hello'
   };
 }
-
-const CHAT_MAX = 60;
 
 function getInstance(id) {
   let inst = instances.get(id);
@@ -128,9 +128,33 @@ function getInstance(id) {
 const players = (inst) => [...inst.sockets.values()].filter((p) => p && p.id);
 const nameOf = (inst, id) => players(inst).find((p) => p.id === id)?.name ?? 'Player';
 
-function bombView(inst) {
-  const b = inst.bomb;
-  const seatIds = b.phase === 'idle' ? players(inst).map((p) => p.id) : b.order;
+// Room members, deduped by player id (a player may have several sockets).
+function membersOf(inst, roomId) {
+  const seen = new Map();
+  for (const p of players(inst)) {
+    if (p.roomId === roomId && !seen.has(p.id)) seen.set(p.id, { id: p.id, name: p.name });
+  }
+  return [...seen.values()];
+}
+
+function deleteRoomIfEmpty(inst, roomId) {
+  if (roomId && inst.rooms.has(roomId) && membersOf(inst, roomId).length === 0) {
+    inst.rooms.delete(roomId);
+  }
+}
+
+function leaveRoom(inst, p) {
+  if (!p?.roomId) return;
+  const room = inst.rooms.get(p.roomId);
+  if (room) handleLeave(room.bomb, indexFor(room.bomb), p.id);
+  const oldId = p.roomId;
+  p.roomId = null;
+  deleteRoomIfEmpty(inst, oldId);
+}
+
+function bombView(inst, room) {
+  const b = room.bomb;
+  const seatIds = b.phase === 'idle' ? membersOf(inst, room.id).map((m) => m.id) : b.order;
   const seats = seatIds.map((id) => ({
     id,
     name: nameOf(inst, id),
@@ -156,19 +180,43 @@ function bombView(inst) {
   };
 }
 
+const roomsList = (inst) =>
+  [...inst.rooms.values()].map((r) => ({
+    id: r.id,
+    name: r.name,
+    players: membersOf(inst, r.id).length,
+    phase: r.bomb.phase,
+    lang: r.bomb.lang,
+  }));
+
+// Each socket gets the shared state + the detail of its own room (if any).
 function broadcast(id) {
   const inst = instances.get(id);
   if (!inst) return;
-  const msg = JSON.stringify({
+  const base = {
     type: 'state',
     serverTime: Date.now(),
     players: players(inst).map((p) => ({ id: p.id, name: p.name })),
     pomo: inst.pomo,
-    bomb: bombView(inst),
-    chat: inst.chat,
-  });
-  for (const ws of inst.sockets.keys()) {
-    if (ws.readyState === ws.OPEN) ws.send(msg);
+    rooms: roomsList(inst),
+  };
+  for (const [ws, p] of inst.sockets) {
+    if (ws.readyState !== ws.OPEN) continue;
+    let room = null;
+    if (p?.roomId) {
+      const r = inst.rooms.get(p.roomId);
+      if (r) {
+        room = {
+          id: r.id,
+          name: r.name,
+          hostId: r.hostId,
+          members: membersOf(inst, r.id),
+          bomb: bombView(inst, r),
+          chat: r.chat,
+        };
+      }
+    }
+    ws.send(JSON.stringify({ ...base, room }));
   }
 }
 
@@ -232,42 +280,68 @@ function pomoCommand(inst, cmd) {
 
 // ---- Command router -------------------------------------------------------
 function applyCommand(inst, ws, cmd) {
+  const me = inst.sockets.get(ws);
   switch (cmd.type) {
-    case 'hello':
+    case 'hello': {
+      const prev = me ?? {};
       inst.sockets.set(ws, {
-        id: String(cmd.id ?? `guest-${Math.random().toString(36).slice(2, 8)}`),
-        name: String(cmd.name ?? 'Player').slice(0, 32),
+        id: String(cmd.id ?? prev.id ?? `guest-${Math.random().toString(36).slice(2, 8)}`),
+        name: String(cmd.name ?? prev.name ?? 'Player').slice(0, 32),
+        roomId: prev.roomId ?? null,
       });
       break;
+    }
     case 'pomo':
       pomoCommand(inst, cmd);
       break;
-    case 'bomb': {
-      const me = inst.sockets.get(ws);
-      const b = inst.bomb;
-      if (cmd.action === 'start') {
-        const lang = ['en', 'fr', 'ar'].includes(cmd.lang) ? cmd.lang : 'en';
-        startBomb(b, players(inst).map((p) => p.id), INDEXES[lang], { ...cmd, lang });
-      } else if (cmd.action === 'submit') {
-        if (me) submitWord(b, indexFor(b), me.id, cmd.word);
-      } else if (cmd.action === 'typing') {
-        // Mirror the current player's keystrokes to the whole room.
-        if (me && b.phase === 'playing' && b.order[b.turnIdx] === me.id) {
-          b.typing = String(cmd.text ?? '').slice(0, 40);
+    case 'room': {
+      if (!me) break;
+      if (cmd.action === 'create') {
+        if (inst.rooms.size >= ROOMS_MAX) break;
+        leaveRoom(inst, me);
+        const id = Math.random().toString(36).slice(2, 8);
+        const name = String(cmd.name ?? '').trim().slice(0, 24) || `${me.name}'s room`;
+        inst.rooms.set(id, { id, name, hostId: me.id, bomb: freshBomb(), chat: [] });
+        me.roomId = id;
+      } else if (cmd.action === 'join') {
+        const room = inst.rooms.get(String(cmd.id ?? ''));
+        if (room && membersOf(inst, room.id).length < ROOM_MAX_PLAYERS) {
+          leaveRoom(inst, me);
+          me.roomId = room.id;
         }
       } else if (cmd.action === 'leave') {
-        if (me) handleLeave(b, indexFor(b), me.id);
+        leaveRoom(inst, me);
+      }
+      break;
+    }
+    case 'bomb': {
+      if (!me?.roomId) break;
+      const room = inst.rooms.get(me.roomId);
+      if (!room) break;
+      const b = room.bomb;
+      if (cmd.action === 'start') {
+        const lang = ['en', 'fr', 'ar'].includes(cmd.lang) ? cmd.lang : 'en';
+        const ids = membersOf(inst, room.id).map((m) => m.id);
+        startBomb(b, ids, INDEXES[lang], { ...cmd, lang });
+      } else if (cmd.action === 'submit') {
+        submitWord(b, indexFor(b), me.id, cmd.word);
+      } else if (cmd.action === 'typing') {
+        // Mirror the current player's keystrokes to the whole room.
+        if (b.phase === 'playing' && b.order[b.turnIdx] === me.id) {
+          b.typing = String(cmd.text ?? '').slice(0, 40);
+        }
       } else if (cmd.action === 'reset') {
         resetBomb(b);
       }
       break;
     }
     case 'chat': {
-      const me = inst.sockets.get(ws);
+      if (!me?.roomId) break;
+      const room = inst.rooms.get(me.roomId);
       const text = String(cmd.text ?? '').trim().slice(0, 200);
-      if (me && text) {
-        inst.chat.push({ id: me.id, name: me.name, text, t: Date.now() });
-        if (inst.chat.length > CHAT_MAX) inst.chat.splice(0, inst.chat.length - CHAT_MAX);
+      if (room && text) {
+        room.chat.push({ id: me.id, name: me.name, text, t: Date.now() });
+        if (room.chat.length > CHAT_MAX) room.chat.splice(0, room.chat.length - CHAT_MAX);
       }
       break;
     }
@@ -276,7 +350,7 @@ function applyCommand(inst, ws, cmd) {
   }
 }
 
-// One global tick drives Pomodoro phase changes + Word Bomb turn timeouts.
+// One global tick drives Pomodoro phase changes + every room's bomb timer.
 setInterval(() => {
   for (const [id, inst] of instances) {
     let changed = false;
@@ -285,7 +359,9 @@ setInterval(() => {
       pomoAdvance(s);
       changed = true;
     }
-    if (timeoutTick(inst.bomb, indexFor(inst.bomb), (pid) => nameOf(inst, pid))) changed = true;
+    for (const room of inst.rooms.values()) {
+      if (timeoutTick(room.bomb, indexFor(room.bomb), (pid) => nameOf(inst, pid))) changed = true;
+    }
     if (changed) broadcast(id);
   }
 }, 500);
@@ -317,7 +393,11 @@ wss.on('connection', (ws, req) => {
   ws.on('close', () => {
     const me = inst.sockets.get(ws);
     inst.sockets.delete(ws);
-    if (me) handleLeave(inst.bomb, indexFor(inst.bomb), me.id);
+    if (me?.roomId) {
+      const room = inst.rooms.get(me.roomId);
+      if (room) handleLeave(room.bomb, indexFor(room.bomb), me.id);
+      deleteRoomIfEmpty(inst, me.roomId);
+    }
     if (inst.sockets.size === 0) {
       setTimeout(() => {
         if (inst.sockets.size === 0) instances.delete(instanceId);

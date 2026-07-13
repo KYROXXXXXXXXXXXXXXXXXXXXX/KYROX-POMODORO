@@ -50,20 +50,35 @@ export interface BombState {
   currentId: string | null;
   seats: Seat[];
 }
+export interface RoomSummary {
+  id: string;
+  name: string;
+  players: number;
+  phase: 'idle' | 'playing' | 'over';
+  lang: BombLang;
+}
+export interface RoomState {
+  id: string;
+  name: string;
+  hostId: string;
+  members: Player[];
+  bomb: BombState;
+  chat: ChatMsg[];
+}
 interface Msg {
   type: 'state';
   serverTime: number;
   players: Player[];
   pomo: PomoState;
-  bomb: BombState;
-  chat: ChatMsg[];
+  rooms: RoomSummary[];
+  room: RoomState | null;
 }
 
 export interface Snapshot {
   players: Player[];
   pomo: PomoState & { secondsLeft: number };
-  bomb: BombState & { secondsLeft: number };
-  chat: ChatMsg[];
+  rooms: RoomSummary[];
+  room: (Omit<RoomState, 'bomb'> & { bomb: BombState & { secondsLeft: number } }) | null;
 }
 
 export interface Sync {
@@ -76,6 +91,11 @@ export interface Sync {
     skip: () => void;
     config: (d: { focus: number; short: number; long: number }, longEvery: number) => void;
   };
+  room: {
+    create: (name: string) => void;
+    join: (id: string) => void;
+    leave: () => void;
+  };
   bomb: {
     start: (opts: {
       turnSeconds: number;
@@ -85,7 +105,6 @@ export interface Sync {
     }) => void;
     submit: (word: string) => void;
     typing: (text: string) => void;
-    leave: () => void;
     reset: () => void;
   };
   chat: {
@@ -163,15 +182,16 @@ export function useGameSync(instanceId: string | null, me: Me | null): Sync {
         m.pomo.running && m.pomo.endsAt
           ? Math.max(0, Math.round((m.pomo.endsAt - nowServer) / 1000))
           : m.pomo.remaining;
+      const b = m.room?.bomb;
       const bombLeft =
-        m.bomb.phase === 'playing' && m.bomb.turnEndsAt
-          ? Math.max(0, (m.bomb.turnEndsAt - nowServer) / 1000)
+        b && b.phase === 'playing' && b.turnEndsAt
+          ? Math.max(0, (b.turnEndsAt - nowServer) / 1000)
           : 0;
       setSnap({
         players: m.players,
         pomo: { ...m.pomo, secondsLeft: pomoLeft },
-        bomb: { ...m.bomb, secondsLeft: bombLeft },
-        chat: m.chat,
+        rooms: m.rooms,
+        room: m.room ? { ...m.room, bomb: { ...m.room.bomb, secondsLeft: bombLeft } } : null,
       });
     };
     const id = setInterval(tick, 100);
@@ -194,11 +214,15 @@ export function useGameSync(instanceId: string | null, me: Me | null): Sync {
       skip: () => send({ type: 'pomo', action: 'skip' }),
       config: (durations, longEvery) => send({ type: 'pomo', action: 'config', durations, longEvery }),
     },
+    room: {
+      create: (name) => send({ type: 'room', action: 'create', name }),
+      join: (id) => send({ type: 'room', action: 'join', id }),
+      leave: () => send({ type: 'room', action: 'leave' }),
+    },
     bomb: {
       start: (opts) => send({ type: 'bomb', action: 'start', ...opts }),
       submit: (word) => send({ type: 'bomb', action: 'submit', word }),
       typing: (text) => send({ type: 'bomb', action: 'typing', text }),
-      leave: () => send({ type: 'bomb', action: 'leave' }),
       reset: () => send({ type: 'bomb', action: 'reset' }),
     },
     chat: {

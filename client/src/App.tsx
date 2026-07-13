@@ -5,8 +5,10 @@ import { Pomodoro } from './Pomodoro';
 import { WordBomb } from './WordBomb';
 import { KyroxCompanion } from './Kyrox';
 
-// Per-device visual theme: midnight (dark blue/violet) or crimson (maroon/silver).
-type Theme = 'midnight' | 'crimson';
+// Per-device visual theme, cycled from the header button.
+type Theme = 'midnight' | 'crimson' | 'sakura';
+const THEME_NEXT: Record<Theme, Theme> = { midnight: 'crimson', crimson: 'sakura', sakura: 'midnight' };
+const THEME_ICON: Record<Theme, string> = { midnight: '🌙', crimson: '🍷', sakura: '🌸' };
 
 // 3D tilt: cards lean toward the cursor, with a glare highlight following it.
 function tiltMove(e: React.MouseEvent<HTMLElement>) {
@@ -32,15 +34,16 @@ function Header({ theme, onToggleTheme }: { theme?: Theme; onToggleTheme?: () =>
       <div className="wordmark">
         <span className="wm-title">StudySouk</span>
         <span className="wm-sub">#Academy</span>
+        <span className="by-kyrox">by KYROX</span>
       </div>
-      {onToggleTheme && (
+      {onToggleTheme && theme && (
         <button
           className="theme-toggle"
           onClick={onToggleTheme}
-          title={theme === 'midnight' ? 'Switch to Crimson theme' : 'Switch to Midnight theme'}
+          title={`Theme: ${theme} — click to switch`}
           aria-label="Switch theme"
         >
-          {theme === 'midnight' ? '🌙' : '🍷'}
+          {THEME_ICON[theme]}
         </button>
       )}
     </header>
@@ -189,10 +192,7 @@ export default function App() {
   const { snap } = sync;
   return (
     <div className={view === 'wordbomb' ? 'app app-wide' : 'app'}>
-      <Header
-        theme={theme}
-        onToggleTheme={() => setTheme((t) => (t === 'midnight' ? 'crimson' : 'midnight'))}
-      />
+      <Header theme={theme} onToggleTheme={() => setTheme((t) => THEME_NEXT[t])} />
       {view !== 'menu' && (
         <button className="back" onClick={() => setView('menu')}>
           ‹ Menu
@@ -200,7 +200,7 @@ export default function App() {
       )}
       {view === 'menu' && <Dashboard onOpen={setView} players={snap.players} />}
       {view === 'pomodoro' && <Pomodoro sync={sync} />}
-      {view === 'wordbomb' && <WordBomb sync={sync} me={me!} onLeave={() => setView('menu')} />}
+      {view === 'wordbomb' && <WordBomb sync={sync} me={me!} />}
       <KyroxCompanion view={view} />
     </div>
   );

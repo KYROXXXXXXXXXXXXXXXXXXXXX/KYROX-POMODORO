@@ -84,6 +84,53 @@
   filter: drop-shadow(0 0 10px rgba(201, 162, 110, 0.55));
 }
 
+/* ---- Sakura theme (cherry blossom night) ----------------------------------- */
+[data-theme='sakura'] {
+  --bg: #180e14;
+  --bg-soft: #241521;
+  --card: rgba(255, 214, 231, 0.05);
+  --card-strong: rgba(255, 214, 231, 0.09);
+  --line: rgba(255, 214, 231, 0.12);
+  --line-strong: rgba(255, 214, 231, 0.24);
+  --text: #f2dfe8;
+  --text-dim: #a98a9b;
+  --text-bright: #ffffff;
+  --accent: #ff8fb8;
+  --accent-2: #c86bff;
+  --amber: #ffd39e;
+  --mint: #9be3c6;
+  --danger: #ff7a7a;
+  --focus: #ffd39e;
+  --short: #9be3c6;
+  --long: #f2b8ff;
+  --display: var(--sans);
+  --collar: #d14b7d;
+  --collar-stroke: #ff8fb8;
+}
+[data-theme='sakura'] body::before {
+  background:
+    radial-gradient(52% 42% at 20% -6%, rgba(255, 143, 184, 0.16), transparent 70%),
+    radial-gradient(46% 38% at 85% 10%, rgba(200, 107, 255, 0.1), transparent 70%),
+    radial-gradient(50% 45% at 75% 100%, rgba(255, 211, 158, 0.06), transparent 70%);
+}
+[data-theme='sakura'] .wm-title {
+  background: linear-gradient(92deg, #ffffff 10%, #ffc7dd 55%, #c86bff);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+[data-theme='sakura'] .btn-primary {
+  box-shadow: 0 6px 22px rgba(255, 143, 184, 0.35);
+}
+[data-theme='sakura'] input:focus,
+[data-theme='sakura'] .word-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(255, 143, 184, 0.2);
+}
+[data-theme='sakura'] .k-glow,
+[data-theme='sakura'] .arena-center {
+  background: radial-gradient(circle at 35% 30%, rgba(255, 143, 184, 0.22), rgba(0, 0, 0, 0.45));
+}
+
 * {
   box-sizing: border-box;
 }
@@ -213,6 +260,15 @@ body::after {
   color: var(--text-dim);
   letter-spacing: 0.42em;
   text-transform: uppercase;
+}
+.by-kyrox {
+  margin-top: 3px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--accent);
+  opacity: 0.85;
 }
 
 .back {
@@ -721,6 +777,83 @@ input:focus,
   border: 1px solid var(--line-strong);
   background: var(--card);
   color: var(--text);
+}
+
+/* ---- Room browser ----------------------------------------------------------- */
+.create-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 560px;
+}
+.create-row .word-input {
+  flex: 1;
+  min-width: 0;
+}
+.rooms {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.room-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.room-row:hover {
+  background: var(--card-strong);
+  border-color: var(--line-strong);
+}
+.room-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 700;
+  color: var(--text-bright);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.room-meta {
+  display: flex;
+  gap: 6px;
+}
+.badge.live {
+  color: #7ee2a8;
+  border-color: rgba(126, 226, 168, 0.4);
+}
+.center-text {
+  text-align: center;
+}
+.room-head {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.room-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.room-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-bright);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ---- BombParty layout: game + chat side by side --------------------------- */
