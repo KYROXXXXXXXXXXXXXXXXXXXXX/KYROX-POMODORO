@@ -352,6 +352,7 @@ export function WordBomb({ sync, me }: { sync: Sync; me: Me }) {
             {langInfo?.flag} {langInfo?.label}
           </span>
           <span className="badge">{LEVEL_LABEL[b.level] ?? LEVEL_LABEL[0]}</span>
+          {b.solo && <span className="badge">🧪 Solo practice</span>}
         </div>
 
         <TypingStrip text={myTurn ? word : b.typing} syllable={b.syllable} />

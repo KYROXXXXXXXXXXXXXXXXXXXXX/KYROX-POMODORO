@@ -145,6 +145,29 @@ export function advanceTurn(b) {
   }
 }
 
+// A wrong submission costs a heart and passes the bomb (solo: just a nudge).
+function failTurn(b, index, reason, now) {
+  b.typing = '';
+  if (b.solo) {
+    b.message = reason;
+    return;
+  }
+  const cur = b.order[b.turnIdx];
+  b.lives[cur] = Math.max(0, (b.lives[cur] || 0) - 1);
+  b.message = `${reason} — 💔`;
+  if (b.lives[cur] <= 0) b.alive[cur] = false;
+  const remaining = b.order.filter((id) => b.alive[id]);
+  if (remaining.length <= 1) {
+    b.phase = 'over';
+    b.winnerId = remaining[0] || null;
+    b.turnEndsAt = null;
+    return;
+  }
+  advanceTurn(b);
+  b.syllable = pickSyllable(index.tiers, b.level);
+  b.turnEndsAt = now + b.turnMs;
+}
+
 /** Returns true if the word was accepted. Otherwise sets b.message and returns false. */
 export function submitWord(b, index, playerId, raw, now = Date.now()) {
   if (b.phase !== 'playing') return false;
@@ -152,15 +175,15 @@ export function submitWord(b, index, playerId, raw, now = Date.now()) {
   const word = index.norm(raw || '');
   if (!word) return false;
   if (!word.includes(b.syllable)) {
-    b.message = `The word must contain “${b.syllable}”`;
+    failTurn(b, index, `The word must contain “${b.syllable}”`, now);
     return false;
   }
   if (b.used.has(word)) {
-    b.message = 'Word already used!';
+    failTurn(b, index, 'Word already used!', now);
     return false;
   }
   if (!index.dict.has(word)) {
-    b.message = `“${String(raw).trim()}” isn't in the dictionary`;
+    failTurn(b, index, `“${String(raw).trim()}” isn't in the dictionary`, now);
     return false;
   }
   b.used.add(word);
