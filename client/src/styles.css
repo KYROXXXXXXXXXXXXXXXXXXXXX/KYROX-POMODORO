@@ -951,6 +951,31 @@ input:focus,
   border-color: var(--danger);
   box-shadow: 0 0 24px rgba(255, 107, 107, 0.35);
 }
+.countdown-num {
+  font-size: 58px;
+  animation: count-pop 1s ease infinite;
+}
+@keyframes count-pop {
+  0% {
+    transform: scale(1.25);
+    opacity: 0.6;
+  }
+  30% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.spectate-banner {
+  width: 100%;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--amber);
+  background: rgba(255, 196, 92, 0.08);
+  border: 1px solid rgba(255, 196, 92, 0.3);
+  border-radius: 12px;
+  padding: 9px 12px;
+}
 .arena.danger .syllable {
   color: var(--danger);
 }

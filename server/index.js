@@ -163,6 +163,7 @@ function bombView(inst, room) {
   }));
   return {
     phase: b.phase,
+    countdownEndsAt: b.countdownEndsAt,
     lang: b.lang,
     difficulty: b.difficulty,
     level: b.level,

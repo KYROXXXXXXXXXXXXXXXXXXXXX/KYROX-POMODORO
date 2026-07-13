@@ -68,7 +68,13 @@ function TypingStrip({ text, syllable }: { text: string; syllable: string }) {
 }
 
 // Players in a circle around the bomb; the arrow points at whoever must play.
-function Arena({ b, me }: { b: BombState & { secondsLeft: number }; me: Me }) {
+function Arena({
+  b,
+  me,
+}: {
+  b: BombState & { secondsLeft: number; countdown: number };
+  me: Me;
+}) {
   const seats = b.seats;
   const n = Math.max(seats.length, 1);
   const curIdx = Math.max(
@@ -86,10 +92,19 @@ function Arena({ b, me }: { b: BombState & { secondsLeft: number }; me: Me }) {
         </svg>
       </div>
       <div className="arena-center">
-        <div className="syllable serif" dir="auto">
-          {b.syllable.toUpperCase()}
-        </div>
-        <div className="bomb-timer">{b.secondsLeft.toFixed(1)}s</div>
+        {b.phase === 'countdown' ? (
+          <>
+            <div className="syllable serif countdown-num">{Math.ceil(b.countdown) || 1}</div>
+            <div className="bomb-timer">Get ready…</div>
+          </>
+        ) : (
+          <>
+            <div className="syllable serif" dir="auto">
+              {b.syllable.toUpperCase()}
+            </div>
+            <div className="bomb-timer">{b.secondsLeft.toFixed(1)}s</div>
+          </>
+        )}
       </div>
       {seats.map((s, i) => {
         const rad = (angleDeg(i) * Math.PI) / 180;
@@ -319,9 +334,13 @@ export function WordBomb({ sync, me }: { sync: Sync; me: Me }) {
             </label>
           </div>
           <button className="btn btn-primary big" onClick={() => sync.bomb.start(startOpts)}>
-            💣 Start game
+            {room.members.length <= 1 ? '🧪 Start solo practice' : '💣 Start game'}
           </button>
-          <p className="muted small">2+ players recommended · solo is practice mode.</p>
+          <p className="muted small">
+            {room.members.length <= 1
+              ? 'Alone in the room — invite friends for a real match!'
+              : `${room.members.length} players ready.`}
+          </p>
         </div>
       </>
     );
@@ -343,10 +362,14 @@ export function WordBomb({ sync, me }: { sync: Sync; me: Me }) {
       </div>
     );
   } else {
-    // ---- Playing ------------------------------------------------------------
+    // ---- Countdown + playing --------------------------------------------------
     const current = b.seats.find((s) => s.id === b.currentId);
+    const meSeated = b.seats.some((s) => s.id === me.id);
     main = (
       <>
+        {!meSeated && (
+          <div className="spectate-banner">👀 Spectating — you'll join the next round</div>
+        )}
         <div className="bomb-badges">
           <span className="badge">
             {langInfo?.flag} {langInfo?.label}

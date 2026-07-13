@@ -81,7 +81,8 @@ const DIFF_LEVEL = { easy: 0, normal: 1, hard: 2 };
 
 export function freshBomb() {
   return {
-    phase: 'idle', // 'idle' | 'playing' | 'over'
+    phase: 'idle', // 'idle' | 'countdown' | 'playing' | 'over'
+    countdownEndsAt: null,
     lang: 'en', // 'en' | 'fr' | 'ar'
     difficulty: 'easy',
     level: 0,
@@ -124,14 +125,16 @@ export function startBomb(b, ids, index, opts = {}) {
   }
   b.solo = b.order.length === 1;
   b.turnIdx = 0;
-  b.syllable = pickSyllable(index.tiers, b.level);
+  b.syllable = '';
   b.typing = '';
   b.used = new Set();
-  b.turnEndsAt = Date.now() + b.turnMs;
+  b.turnEndsAt = null;
   b.winnerId = null;
   b.lastWord = null;
   b.message = null;
-  b.phase = 'playing';
+  // 3-2-1 countdown before the round actually starts (like the real thing).
+  b.countdownEndsAt = Date.now() + 3000;
+  b.phase = 'countdown';
 }
 
 export function advanceTurn(b) {
@@ -200,6 +203,14 @@ export function submitWord(b, index, playerId, raw, now = Date.now()) {
 
 /** Drives the bomb timer. nameOf(id)->string for messages. Returns true if state changed. */
 export function timeoutTick(b, index, nameOf, now = Date.now()) {
+  if (b.phase === 'countdown') {
+    if (now < b.countdownEndsAt) return false;
+    b.phase = 'playing';
+    b.countdownEndsAt = null;
+    b.syllable = pickSyllable(index.tiers, b.level);
+    b.turnEndsAt = now + b.turnMs;
+    return true;
+  }
   if (b.phase !== 'playing' || !b.turnEndsAt || now < b.turnEndsAt) return false;
   const cur = b.order[b.turnIdx];
   b.typing = '';
@@ -226,7 +237,7 @@ export function timeoutTick(b, index, nameOf, now = Date.now()) {
 }
 
 export function handleLeave(b, index, id, now = Date.now()) {
-  if (b.phase !== 'playing' || !(id in b.alive)) return false;
+  if ((b.phase !== 'playing' && b.phase !== 'countdown') || !(id in b.alive)) return false;
   const wasCurrent = b.order[b.turnIdx] === id;
   b.alive[id] = false;
   const remaining = b.order.filter((x) => b.alive[x]);
@@ -234,13 +245,16 @@ export function handleLeave(b, index, id, now = Date.now()) {
     b.phase = 'over';
     b.winnerId = remaining[0] || null;
     b.turnEndsAt = null;
+    b.countdownEndsAt = null;
     return true;
   }
   if (wasCurrent) {
     advanceTurn(b);
-    b.syllable = pickSyllable(index.tiers, b.level);
-    b.typing = '';
-    b.turnEndsAt = now + b.turnMs;
+    if (b.phase === 'playing') {
+      b.syllable = pickSyllable(index.tiers, b.level);
+      b.typing = '';
+      b.turnEndsAt = now + b.turnMs;
+    }
     return true;
   }
   return false;
@@ -248,6 +262,7 @@ export function handleLeave(b, index, id, now = Date.now()) {
 
 export function resetBomb(b) {
   b.phase = 'idle';
+  b.countdownEndsAt = null;
   b.order = [];
   b.lives = {};
   b.alive = {};

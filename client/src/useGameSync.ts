@@ -34,7 +34,8 @@ export interface Seat {
   alive: boolean;
 }
 export interface BombState {
-  phase: 'idle' | 'playing' | 'over';
+  phase: 'idle' | 'countdown' | 'playing' | 'over';
+  countdownEndsAt: number | null;
   lang: BombLang;
   difficulty: BombDifficulty;
   level: number;
@@ -54,7 +55,7 @@ export interface RoomSummary {
   id: string;
   name: string;
   players: number;
-  phase: 'idle' | 'playing' | 'over';
+  phase: 'idle' | 'countdown' | 'playing' | 'over';
   lang: BombLang;
 }
 export interface RoomState {
@@ -78,7 +79,9 @@ export interface Snapshot {
   players: Player[];
   pomo: PomoState & { secondsLeft: number };
   rooms: RoomSummary[];
-  room: (Omit<RoomState, 'bomb'> & { bomb: BombState & { secondsLeft: number } }) | null;
+  room:
+    | (Omit<RoomState, 'bomb'> & { bomb: BombState & { secondsLeft: number; countdown: number } })
+    | null;
 }
 
 export interface Sync {
@@ -187,11 +190,17 @@ export function useGameSync(instanceId: string | null, me: Me | null): Sync {
         b && b.phase === 'playing' && b.turnEndsAt
           ? Math.max(0, (b.turnEndsAt - nowServer) / 1000)
           : 0;
+      const countdown =
+        b && b.phase === 'countdown' && b.countdownEndsAt
+          ? Math.max(0, (b.countdownEndsAt - nowServer) / 1000)
+          : 0;
       setSnap({
         players: m.players,
         pomo: { ...m.pomo, secondsLeft: pomoLeft },
         rooms: m.rooms,
-        room: m.room ? { ...m.room, bomb: { ...m.room.bomb, secondsLeft: bombLeft } } : null,
+        room: m.room
+          ? { ...m.room, bomb: { ...m.room.bomb, secondsLeft: bombLeft, countdown } }
+          : null,
       });
     };
     const id = setInterval(tick, 100);
