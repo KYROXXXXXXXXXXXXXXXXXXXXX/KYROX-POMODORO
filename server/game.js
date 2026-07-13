@@ -91,6 +91,7 @@ export function freshBomb() {
     alive: {},
     turnIdx: 0,
     syllable: '',
+    typing: '', // live text of the current player, mirrored to everyone
     used: new Set(),
     turnEndsAt: null,
     turnMs: 12000,
@@ -124,6 +125,7 @@ export function startBomb(b, ids, index, opts = {}) {
   b.solo = b.order.length === 1;
   b.turnIdx = 0;
   b.syllable = pickSyllable(index.tiers, b.level);
+  b.typing = '';
   b.used = new Set();
   b.turnEndsAt = Date.now() + b.turnMs;
   b.winnerId = null;
@@ -164,6 +166,7 @@ export function submitWord(b, index, playerId, raw, now = Date.now()) {
   b.used.add(word);
   b.lastWord = word;
   b.message = null;
+  b.typing = '';
   b.solved += 1;
   if (b.solved % LEVEL_EVERY === 0 && b.level < 2) b.level += 1;
   b.syllable = pickSyllable(index.tiers, b.level);
@@ -176,6 +179,7 @@ export function submitWord(b, index, playerId, raw, now = Date.now()) {
 export function timeoutTick(b, index, nameOf, now = Date.now()) {
   if (b.phase !== 'playing' || !b.turnEndsAt || now < b.turnEndsAt) return false;
   const cur = b.order[b.turnIdx];
+  b.typing = '';
   if (b.solo) {
     b.message = '💥 Missed!';
     b.syllable = pickSyllable(index.tiers, b.level);
@@ -212,6 +216,7 @@ export function handleLeave(b, index, id, now = Date.now()) {
   if (wasCurrent) {
     advanceTurn(b);
     b.syllable = pickSyllable(index.tiers, b.level);
+    b.typing = '';
     b.turnEndsAt = now + b.turnMs;
     return true;
   }
@@ -223,6 +228,7 @@ export function resetBomb(b) {
   b.order = [];
   b.lives = {};
   b.alive = {};
+  b.typing = '';
   b.used = new Set();
   b.turnEndsAt = null;
   b.winnerId = null;

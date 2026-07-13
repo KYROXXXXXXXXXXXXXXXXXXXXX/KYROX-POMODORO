@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { inDiscord, getInstanceId, authenticateUser, type Me } from './discordSdk';
-import { useGameSync, type Sync, type Player } from './useGameSync';
+import { useGameSync, type Player, type View } from './useGameSync';
 import { Pomodoro } from './Pomodoro';
 import { WordBomb } from './WordBomb';
 import { KyroxCompanion } from './Kyrox';
@@ -97,7 +97,7 @@ function LockedCard({
   );
 }
 
-function Dashboard({ sync, players }: { sync: Sync; players: Player[] }) {
+function Dashboard({ onOpen, players }: { onOpen: (v: View) => void; players: Player[] }) {
   return (
     <div className="screen dashboard">
       <p className="present muted">
@@ -110,7 +110,7 @@ function Dashboard({ sync, players }: { sync: Sync; players: Player[] }) {
           <button
             className="game-card"
             data-tour="pomodoro"
-            onClick={() => sync.setView('pomodoro')}
+            onClick={() => onOpen('pomodoro')}
             onMouseMove={tiltMove}
             onMouseLeave={tiltReset}
           >
@@ -129,7 +129,7 @@ function Dashboard({ sync, players }: { sync: Sync; players: Player[] }) {
           <button
             className="game-card"
             data-tour="wordbomb"
-            onClick={() => sync.setView('wordbomb')}
+            onClick={() => onOpen('wordbomb')}
             onMouseMove={tiltMove}
             onMouseLeave={tiltReset}
           >
@@ -142,7 +142,7 @@ function Dashboard({ sync, players }: { sync: Sync; players: Player[] }) {
         </div>
       </section>
 
-      <p className="footnote muted">Everyone in the voice channel sees the same screen, in real time.</p>
+      <p className="footnote muted">Games and timers are shared live — but everyone browses freely.</p>
     </div>
   );
 }
@@ -156,6 +156,8 @@ export default function App() {
   const [theme, setTheme] = useState<Theme>(
     () => (localStorage.getItem('ss-theme') as Theme) || 'midnight',
   );
+  // Navigation is personal: everyone browses freely, games stay shared.
+  const [view, setView] = useState<View>('menu');
 
   // Apply the theme to the whole document (onboarding included).
   useEffect(() => {
@@ -186,20 +188,20 @@ export default function App() {
 
   const { snap } = sync;
   return (
-    <div className="app">
+    <div className={view === 'wordbomb' ? 'app app-wide' : 'app'}>
       <Header
         theme={theme}
         onToggleTheme={() => setTheme((t) => (t === 'midnight' ? 'crimson' : 'midnight'))}
       />
-      {snap.view !== 'menu' && (
-        <button className="back" onClick={() => sync.setView('menu')}>
+      {view !== 'menu' && (
+        <button className="back" onClick={() => setView('menu')}>
           ‹ Menu
         </button>
       )}
-      {snap.view === 'menu' && <Dashboard sync={sync} players={snap.players} />}
-      {snap.view === 'pomodoro' && <Pomodoro sync={sync} />}
-      {snap.view === 'wordbomb' && <WordBomb sync={sync} me={me!} />}
-      <KyroxCompanion view={snap.view} />
+      {view === 'menu' && <Dashboard onOpen={setView} players={snap.players} />}
+      {view === 'pomodoro' && <Pomodoro sync={sync} />}
+      {view === 'wordbomb' && <WordBomb sync={sync} me={me!} onLeave={() => setView('menu')} />}
+      <KyroxCompanion view={view} />
     </div>
   );
 }

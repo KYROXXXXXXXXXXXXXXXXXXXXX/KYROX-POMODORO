@@ -99,7 +99,7 @@ const instances = new Map();
 
 function freshInstance() {
   return {
-    view: 'menu', // 'menu' | 'pomodoro' | 'wordbomb'
+    chat: [], // last CHAT_MAX messages, shared by the whole room
     pomo: {
       mode: 'focus',
       running: false,
@@ -113,6 +113,8 @@ function freshInstance() {
     sockets: new Map(), // ws -> { id, name }
   };
 }
+
+const CHAT_MAX = 60;
 
 function getInstance(id) {
   let inst = instances.get(id);
@@ -141,6 +143,7 @@ function bombView(inst) {
     difficulty: b.difficulty,
     level: b.level,
     syllable: b.syllable,
+    typing: b.typing ?? '',
     turnEndsAt: b.turnEndsAt,
     turnMs: b.turnMs,
     startLives: b.startLives,
@@ -159,10 +162,10 @@ function broadcast(id) {
   const msg = JSON.stringify({
     type: 'state',
     serverTime: Date.now(),
-    view: inst.view,
     players: players(inst).map((p) => ({ id: p.id, name: p.name })),
     pomo: inst.pomo,
     bomb: bombView(inst),
+    chat: inst.chat,
   });
   for (const ws of inst.sockets.keys()) {
     if (ws.readyState === ws.OPEN) ws.send(msg);
@@ -236,23 +239,38 @@ function applyCommand(inst, ws, cmd) {
         name: String(cmd.name ?? 'Player').slice(0, 32),
       });
       break;
-    case 'view':
-      if (['menu', 'pomodoro', 'wordbomb'].includes(cmd.view)) inst.view = cmd.view;
-      break;
     case 'pomo':
       pomoCommand(inst, cmd);
       break;
-    case 'bomb':
+    case 'bomb': {
+      const me = inst.sockets.get(ws);
+      const b = inst.bomb;
       if (cmd.action === 'start') {
         const lang = ['en', 'fr', 'ar'].includes(cmd.lang) ? cmd.lang : 'en';
-        startBomb(inst.bomb, players(inst).map((p) => p.id), INDEXES[lang], { ...cmd, lang });
+        startBomb(b, players(inst).map((p) => p.id), INDEXES[lang], { ...cmd, lang });
       } else if (cmd.action === 'submit') {
-        const me = inst.sockets.get(ws);
-        if (me) submitWord(inst.bomb, indexFor(inst.bomb), me.id, cmd.word);
+        if (me) submitWord(b, indexFor(b), me.id, cmd.word);
+      } else if (cmd.action === 'typing') {
+        // Mirror the current player's keystrokes to the whole room.
+        if (me && b.phase === 'playing' && b.order[b.turnIdx] === me.id) {
+          b.typing = String(cmd.text ?? '').slice(0, 40);
+        }
+      } else if (cmd.action === 'leave') {
+        if (me) handleLeave(b, indexFor(b), me.id);
       } else if (cmd.action === 'reset') {
-        resetBomb(inst.bomb);
+        resetBomb(b);
       }
       break;
+    }
+    case 'chat': {
+      const me = inst.sockets.get(ws);
+      const text = String(cmd.text ?? '').trim().slice(0, 200);
+      if (me && text) {
+        inst.chat.push({ id: me.id, name: me.name, text, t: Date.now() });
+        if (inst.chat.length > CHAT_MAX) inst.chat.splice(0, inst.chat.length - CHAT_MAX);
+      }
+      break;
+    }
     default:
       break;
   }

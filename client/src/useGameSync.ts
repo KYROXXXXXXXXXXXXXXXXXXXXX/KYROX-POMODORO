@@ -1,12 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Me } from './discordSdk';
 
+// Navigation is per-user (local state in App); only the games themselves and
+// the room chat are shared through the server.
 export type View = 'menu' | 'pomodoro' | 'wordbomb';
 export type PomoMode = 'focus' | 'short' | 'long';
+export type BombLang = 'en' | 'fr' | 'ar';
+export type BombDifficulty = 'easy' | 'normal' | 'hard';
 
 export interface Player {
   id: string;
   name: string;
+}
+export interface ChatMsg {
+  id: string;
+  name: string;
+  text: string;
+  t: number;
 }
 export interface PomoState {
   mode: PomoMode;
@@ -23,14 +33,13 @@ export interface Seat {
   lives: number;
   alive: boolean;
 }
-export type BombLang = 'en' | 'fr' | 'ar';
-export type BombDifficulty = 'easy' | 'normal' | 'hard';
 export interface BombState {
   phase: 'idle' | 'playing' | 'over';
   lang: BombLang;
   difficulty: BombDifficulty;
   level: number;
   syllable: string;
+  typing: string;
   turnEndsAt: number | null;
   turnMs: number;
   startLives: number;
@@ -44,23 +53,22 @@ export interface BombState {
 interface Msg {
   type: 'state';
   serverTime: number;
-  view: View;
   players: Player[];
   pomo: PomoState;
   bomb: BombState;
+  chat: ChatMsg[];
 }
 
 export interface Snapshot {
-  view: View;
   players: Player[];
   pomo: PomoState & { secondsLeft: number };
   bomb: BombState & { secondsLeft: number };
+  chat: ChatMsg[];
 }
 
 export interface Sync {
   snap: Snapshot | null;
   connected: boolean;
-  setView: (v: View) => void;
   pomo: {
     start: () => void;
     pause: () => void;
@@ -76,7 +84,12 @@ export interface Sync {
       difficulty: BombDifficulty;
     }) => void;
     submit: (word: string) => void;
+    typing: (text: string) => void;
+    leave: () => void;
     reset: () => void;
+  };
+  chat: {
+    send: (text: string) => void;
   };
 }
 
@@ -155,10 +168,10 @@ export function useGameSync(instanceId: string | null, me: Me | null): Sync {
           ? Math.max(0, (m.bomb.turnEndsAt - nowServer) / 1000)
           : 0;
       setSnap({
-        view: m.view,
         players: m.players,
         pomo: { ...m.pomo, secondsLeft: pomoLeft },
         bomb: { ...m.bomb, secondsLeft: bombLeft },
+        chat: m.chat,
       });
     };
     const id = setInterval(tick, 100);
@@ -174,7 +187,6 @@ export function useGameSync(instanceId: string | null, me: Me | null): Sync {
   return {
     snap,
     connected,
-    setView: (v) => send({ type: 'view', view: v }),
     pomo: {
       start: () => send({ type: 'pomo', action: 'start' }),
       pause: () => send({ type: 'pomo', action: 'pause' }),
@@ -185,7 +197,12 @@ export function useGameSync(instanceId: string | null, me: Me | null): Sync {
     bomb: {
       start: (opts) => send({ type: 'bomb', action: 'start', ...opts }),
       submit: (word) => send({ type: 'bomb', action: 'submit', word }),
+      typing: (text) => send({ type: 'bomb', action: 'typing', text }),
+      leave: () => send({ type: 'bomb', action: 'leave' }),
       reset: () => send({ type: 'bomb', action: 'reset' }),
+    },
+    chat: {
+      send: (text) => send({ type: 'chat', text }),
     },
   };
 }
