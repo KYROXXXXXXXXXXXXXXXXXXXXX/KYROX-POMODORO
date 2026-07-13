@@ -1589,4 +1589,69 @@ input:focus,
   .time {
     font-size: 52px;
   }
+  .companion {
+    transform: scale(0.7);
+  }
+}
+
+/* Compact layout for Discord's picture-in-picture / small floating window */
+@media (max-height: 520px) {
+  .app {
+    padding: 10px 14px 60px;
+  }
+  .header {
+    padding-bottom: 8px;
+    gap: 9px;
+  }
+  .logo {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
+  .wm-title {
+    font-size: 18px;
+  }
+  .wm-sub {
+    font-size: 9px;
+    letter-spacing: 0.3em;
+  }
+  .by-kyrox {
+    font-size: 8px;
+    margin-top: 2px;
+  }
+  .theme-toggle {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+  .zone {
+    padding: 12px;
+    gap: 10px;
+  }
+  .gc-icon {
+    width: 42px;
+    height: 42px;
+    font-size: 20px;
+  }
+  .gc-desc {
+    display: none;
+  }
+  .time {
+    font-size: 40px;
+  }
+  .ring-wrap,
+  .ring {
+    width: 200px;
+    height: 200px;
+  }
+  .companion {
+    transform: scale(0.55);
+  }
+}
+/* Tiny PiP: the cat naps somewhere else */
+@media (max-height: 390px) {
+  .companion,
+  .yarn {
+    display: none;
+  }
 }

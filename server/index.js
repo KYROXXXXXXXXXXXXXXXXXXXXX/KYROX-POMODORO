@@ -324,8 +324,20 @@ function applyCommand(inst, ws, cmd) {
         const lang = ['en', 'fr', 'ar'].includes(cmd.lang) ? cmd.lang : 'en';
         const ids = membersOf(inst, room.id).map((m) => m.id);
         startBomb(b, ids, INDEXES[lang], { ...cmd, lang });
+        console.log(
+          `[game ${room.id}] start by ${me.name} · ${lang}/${b.difficulty} · players: ${ids
+            .map((i) => nameOf(inst, i))
+            .join(', ')} · solo=${b.solo}`,
+        );
       } else if (cmd.action === 'submit') {
-        submitWord(b, indexFor(b), me.id, cmd.word);
+        const ok = submitWord(b, indexFor(b), me.id, cmd.word);
+        console.log(
+          `[game ${room.id}] ${me.name} submit "${cmd.word}" → ${
+            ok ? 'accepted' : `refused (${b.message})`
+          } · lives: ${b.order.map((i) => `${nameOf(inst, i)}=${b.lives[i]}`).join(' ')} · next: ${
+            b.phase === 'playing' ? nameOf(inst, b.order[b.turnIdx]) : b.phase
+          }`,
+        );
       } else if (cmd.action === 'typing') {
         // Mirror the current player's keystrokes to the whole room.
         if (b.phase === 'playing' && b.order[b.turnIdx] === me.id) {
