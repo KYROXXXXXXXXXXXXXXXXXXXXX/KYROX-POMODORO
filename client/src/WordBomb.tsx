@@ -1,6 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Sync } from './useGameSync';
+import type { BombDifficulty, BombLang, Sync } from './useGameSync';
 import type { Me } from './discordSdk';
+
+const LANGS: { id: BombLang; flag: string; label: string }[] = [
+  { id: 'en', flag: '🇬🇧', label: 'English' },
+  { id: 'fr', flag: '🇫🇷', label: 'Français' },
+  { id: 'ar', flag: '🇲🇦', label: 'العربية' },
+];
+const DIFFS: { id: BombDifficulty; label: string; hint: string }[] = [
+  { id: 'easy', label: '😌 Easy', hint: 'common syllables' },
+  { id: 'normal', label: '🙂 Normal', hint: 'trickier mix' },
+  { id: 'hard', label: '🔥 Hard', hint: 'rare syllables' },
+];
+const LEVEL_LABEL = ['😌 Easy', '🙂 Medium', '🔥 Hard'];
 
 function Hearts({ lives, alive }: { lives: number; alive: boolean }) {
   if (!alive) return <span className="hearts dead">✖</span>;
@@ -18,8 +30,11 @@ export function WordBomb({ sync, me }: { sync: Sync; me: Me }) {
   const [word, setWord] = useState('');
   const [turnSeconds, setTurnSeconds] = useState(Math.round(b.turnMs / 1000));
   const [lives, setLives] = useState(b.startLives);
+  const [lang, setLang] = useState<BombLang>(b.lang || 'en');
+  const [difficulty, setDifficulty] = useState<BombDifficulty>(b.difficulty || 'easy');
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const startOpts = { turnSeconds, lives, lang, difficulty };
   const myTurn = b.phase === 'playing' && b.currentId === me.id;
 
   // Focus the field when it becomes my turn.
@@ -50,6 +65,38 @@ export function WordBomb({ sync, me }: { sync: Sync; me: Me }) {
               </div>
             ))}
           </div>
+
+          <div className="opt-group">
+            <span className="opt-label">Language</span>
+            <div className="opt-row">
+              {LANGS.map((l) => (
+                <button
+                  key={l.id}
+                  className={`opt-pill ${lang === l.id ? 'active' : ''}`}
+                  onClick={() => setLang(l.id)}
+                >
+                  {l.flag} {l.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="opt-group">
+            <span className="opt-label">Difficulty · gets harder as you play</span>
+            <div className="opt-row">
+              {DIFFS.map((d) => (
+                <button
+                  key={d.id}
+                  className={`opt-pill ${difficulty === d.id ? 'active' : ''}`}
+                  title={d.hint}
+                  onClick={() => setDifficulty(d.id)}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid two">
             <label>
               Seconds per turn
@@ -66,10 +113,7 @@ export function WordBomb({ sync, me }: { sync: Sync; me: Me }) {
               <input type="number" min={1} max={5} value={lives} onChange={(e) => setLives(+e.target.value)} />
             </label>
           </div>
-          <button
-            className="btn btn-primary big"
-            onClick={() => sync.bomb.start({ turnSeconds, lives })}
-          >
+          <button className="btn btn-primary big" onClick={() => sync.bomb.start(startOpts)}>
             💣 Start game
           </button>
           <p className="muted small">2+ players recommended · solo is practice mode.</p>
@@ -87,7 +131,7 @@ export function WordBomb({ sync, me }: { sync: Sync; me: Me }) {
           <div className="big-emoji">🏆</div>
           <h2 className="serif">{winner ? `${winner.name} wins the game!` : 'Game over'}</h2>
           <div className="controls">
-            <button className="btn btn-primary" onClick={() => sync.bomb.start({ turnSeconds, lives })}>
+            <button className="btn btn-primary" onClick={() => sync.bomb.start(startOpts)}>
               Play again
             </button>
             <button className="btn btn-ghost" onClick={sync.bomb.reset}>
@@ -107,8 +151,15 @@ export function WordBomb({ sync, me }: { sync: Sync; me: Me }) {
   const C = 2 * Math.PI * R;
   const current = b.seats.find((s) => s.id === b.currentId);
 
+  const langInfo = LANGS.find((l) => l.id === b.lang);
   return (
     <div className="screen bomb">
+      <div className="bomb-badges">
+        <span className="badge">
+          {langInfo?.flag} {langInfo?.label}
+        </span>
+        <span className="badge">{LEVEL_LABEL[b.level] ?? LEVEL_LABEL[0]}</span>
+      </div>
       <div className={`bomb-stage ${danger ? 'danger' : ''}`}>
         <svg viewBox="0 0 220 220" className="bomb-ring">
           <circle className="ring-track" cx="110" cy="110" r={R} />
@@ -140,6 +191,7 @@ export function WordBomb({ sync, me }: { sync: Sync; me: Me }) {
         <input
           ref={inputRef}
           className="word-input"
+          dir="auto"
           value={word}
           disabled={!myTurn}
           placeholder={myTurn ? `a word with “${b.syllable}”` : 'wait…'}

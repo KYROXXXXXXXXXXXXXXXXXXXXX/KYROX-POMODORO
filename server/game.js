@@ -1,10 +1,32 @@
 // Pure Word Bomb logic — no server, no timers, no I/O. Fully unit-testable.
+//
+// Multi-language: each language gets its own dictionary index built once at
+// startup ({ dict, tiers, norm }). Syllables are bucketed into 3 rarity tiers
+// (easy / medium / hard); the game starts at the chosen difficulty and climbs
+// one tier every LEVEL_EVERY accepted words.
 
-export const SYL_MIN = 500;
-export const SYL_MAX = 9000;
+export const LEVEL_EVERY = 6; // accepted words before the syllables get rarer
+const MIN_PLAYABLE = 60; // a syllable must appear in at least this many words
 
-export const normWord = (s) =>
-  String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
+// Latin languages: lowercase, strip accents, keep a-z.
+export const normLatin = (s) =>
+  String(s)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z]/g, '');
+
+// Arabic: strip tashkeel/tatweel, unify alef/yaa/hamza/taa-marbuta variants,
+// keep Arabic letters only.
+export const normArabic = (s) =>
+  String(s)
+    .replace(/[ً-ْٰـ]/g, '')
+    .replace(/[أإآٱ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ؤ/g, 'و')
+    .replace(/ئ/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/[^ء-ي]/g, '');
 
 function shuffle(a) {
   for (let i = a.length - 1; i > 0; i--) {
@@ -14,11 +36,15 @@ function shuffle(a) {
   return a;
 }
 
-/** Build the normalized dictionary Set + list of medium-frequency syllables. */
-export function buildIndex(words) {
+/**
+ * Build a language index: normalized dictionary Set + syllables bucketed into
+ * 3 rarity tiers (tiers[0] = common/easy … tiers[2] = rare/hard).
+ */
+export function buildIndex(words, lang = 'en') {
+  const norm = lang === 'ar' ? normArabic : normLatin;
   const dict = new Set();
   for (const w of words) {
-    const n = normWord(w);
+    const n = norm(w);
     if (n.length >= 3) dict.add(n);
   }
   const counts = new Map();
@@ -34,18 +60,32 @@ export function buildIndex(words) {
       }
     }
   }
-  const syllables = [...counts.entries()]
-    .filter(([, c]) => c >= SYL_MIN && c <= SYL_MAX)
+  const playable = [...counts.entries()]
+    .filter(([, c]) => c >= MIN_PLAYABLE)
+    .sort((a, b) => b[1] - a[1])
     .map(([s]) => s);
-  return { dict, syllables };
+  const a = Math.floor(playable.length * 0.35);
+  const b = Math.floor(playable.length * 0.7);
+  const tiers = [playable.slice(0, a), playable.slice(a, b), playable.slice(b)];
+  // Never leave a tier empty on small dictionaries.
+  for (let i = 0; i < 3; i++) if (tiers[i].length === 0) tiers[i] = playable;
+  return { dict, tiers, norm };
 }
 
-export const pickSyllable = (syllables) =>
-  syllables.length ? syllables[(Math.random() * syllables.length) | 0] : 'es';
+export const pickSyllable = (tiers, level) => {
+  const pool = tiers[Math.max(0, Math.min(2, level))] ?? [];
+  return pool.length ? pool[(Math.random() * pool.length) | 0] : 'es';
+};
+
+const DIFF_LEVEL = { easy: 0, normal: 1, hard: 2 };
 
 export function freshBomb() {
   return {
     phase: 'idle', // 'idle' | 'playing' | 'over'
+    lang: 'en', // 'en' | 'fr' | 'ar'
+    difficulty: 'easy',
+    level: 0,
+    solved: 0,
     order: [],
     lives: {},
     alive: {},
@@ -62,7 +102,7 @@ export function freshBomb() {
   };
 }
 
-export function startBomb(b, ids, syllables, opts = {}) {
+export function startBomb(b, ids, index, opts = {}) {
   if (ids.length < 1) return;
   if (Number.isFinite(Number(opts.turnSeconds))) {
     b.turnMs = Math.min(40, Math.max(5, Math.round(Number(opts.turnSeconds)))) * 1000;
@@ -70,6 +110,10 @@ export function startBomb(b, ids, syllables, opts = {}) {
   if (Number.isFinite(Number(opts.lives))) {
     b.startLives = Math.min(5, Math.max(1, Math.round(Number(opts.lives))));
   }
+  b.lang = opts.lang ?? b.lang;
+  b.difficulty = opts.difficulty in DIFF_LEVEL ? opts.difficulty : 'easy';
+  b.level = DIFF_LEVEL[b.difficulty];
+  b.solved = 0;
   b.order = shuffle([...ids]);
   b.lives = {};
   b.alive = {};
@@ -79,7 +123,7 @@ export function startBomb(b, ids, syllables, opts = {}) {
   }
   b.solo = b.order.length === 1;
   b.turnIdx = 0;
-  b.syllable = pickSyllable(syllables);
+  b.syllable = pickSyllable(index.tiers, b.level);
   b.used = new Set();
   b.turnEndsAt = Date.now() + b.turnMs;
   b.winnerId = null;
@@ -100,10 +144,10 @@ export function advanceTurn(b) {
 }
 
 /** Returns true if the word was accepted. Otherwise sets b.message and returns false. */
-export function submitWord(b, dict, syllables, playerId, raw, now = Date.now()) {
+export function submitWord(b, index, playerId, raw, now = Date.now()) {
   if (b.phase !== 'playing') return false;
   if (b.order[b.turnIdx] !== playerId) return false;
-  const word = normWord(raw || '');
+  const word = index.norm(raw || '');
   if (!word) return false;
   if (!word.includes(b.syllable)) {
     b.message = `The word must contain “${b.syllable}”`;
@@ -113,26 +157,28 @@ export function submitWord(b, dict, syllables, playerId, raw, now = Date.now()) 
     b.message = 'Word already used!';
     return false;
   }
-  if (!dict.has(word)) {
+  if (!index.dict.has(word)) {
     b.message = `“${String(raw).trim()}” isn't in the dictionary`;
     return false;
   }
   b.used.add(word);
   b.lastWord = word;
   b.message = null;
-  b.syllable = pickSyllable(syllables);
+  b.solved += 1;
+  if (b.solved % LEVEL_EVERY === 0 && b.level < 2) b.level += 1;
+  b.syllable = pickSyllable(index.tiers, b.level);
   advanceTurn(b);
   b.turnEndsAt = now + b.turnMs;
   return true;
 }
 
 /** Drives the bomb timer. nameOf(id)->string for messages. Returns true if state changed. */
-export function timeoutTick(b, syllables, nameOf, now = Date.now()) {
+export function timeoutTick(b, index, nameOf, now = Date.now()) {
   if (b.phase !== 'playing' || !b.turnEndsAt || now < b.turnEndsAt) return false;
   const cur = b.order[b.turnIdx];
   if (b.solo) {
     b.message = '💥 Missed!';
-    b.syllable = pickSyllable(syllables);
+    b.syllable = pickSyllable(index.tiers, b.level);
     b.turnEndsAt = now + b.turnMs;
     return true;
   }
@@ -147,12 +193,12 @@ export function timeoutTick(b, syllables, nameOf, now = Date.now()) {
     return true;
   }
   advanceTurn(b);
-  b.syllable = pickSyllable(syllables);
+  b.syllable = pickSyllable(index.tiers, b.level);
   b.turnEndsAt = now + b.turnMs;
   return true;
 }
 
-export function handleLeave(b, syllables, id, now = Date.now()) {
+export function handleLeave(b, index, id, now = Date.now()) {
   if (b.phase !== 'playing' || !(id in b.alive)) return false;
   const wasCurrent = b.order[b.turnIdx] === id;
   b.alive[id] = false;
@@ -165,7 +211,7 @@ export function handleLeave(b, syllables, id, now = Date.now()) {
   }
   if (wasCurrent) {
     advanceTurn(b);
-    b.syllable = pickSyllable(syllables);
+    b.syllable = pickSyllable(index.tiers, b.level);
     b.turnEndsAt = now + b.turnMs;
     return true;
   }
@@ -182,4 +228,6 @@ export function resetBomb(b) {
   b.winnerId = null;
   b.lastWord = null;
   b.message = null;
+  b.level = DIFF_LEVEL[b.difficulty] ?? 0;
+  b.solved = 0;
 }

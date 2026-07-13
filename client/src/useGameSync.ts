@@ -23,8 +23,13 @@ export interface Seat {
   lives: number;
   alive: boolean;
 }
+export type BombLang = 'en' | 'fr' | 'ar';
+export type BombDifficulty = 'easy' | 'normal' | 'hard';
 export interface BombState {
   phase: 'idle' | 'playing' | 'over';
+  lang: BombLang;
+  difficulty: BombDifficulty;
+  level: number;
   syllable: string;
   turnEndsAt: number | null;
   turnMs: number;
@@ -64,7 +69,12 @@ export interface Sync {
     config: (d: { focus: number; short: number; long: number }, longEvery: number) => void;
   };
   bomb: {
-    start: (opts: { turnSeconds: number; lives: number }) => void;
+    start: (opts: {
+      turnSeconds: number;
+      lives: number;
+      lang: BombLang;
+      difficulty: BombDifficulty;
+    }) => void;
     submit: (word: string) => void;
     reset: () => void;
   };

@@ -301,6 +301,13 @@ const centerStage = () => ({
   y: window.innerHeight * 0.42,
 });
 
+interface Ball {
+  x: number;
+  vx: number;
+  hits: number;
+  leaving: boolean;
+}
+
 export function KyroxCompanion({ view }: { view: View }) {
   const [mode, setMode] = useState<'roam' | 'tour'>('roam');
   const [tourStep, setTourStep] = useState(0);
@@ -310,6 +317,9 @@ export function KyroxCompanion({ view }: { view: View }) {
   const [sleeping, setSleeping] = useState(false);
   const [pos, setPos] = useState(roamPos);
   const [run, setRun] = useState<{ dur: number; dir: 1 | -1 } | null>(null);
+  const [ball, setBall] = useState<{ x: number } | null>(null);
+  const [swipe, setSwipe] = useState(false);
+  const [swipeDir, setSwipeDir] = useState<1 | -1>(1);
 
   const wrapRef = useRef<HTMLDivElement>(null);
   const gaze = useMouseGaze(wrapRef);
@@ -319,6 +329,7 @@ export function KyroxCompanion({ view }: { view: View }) {
   const lastPoke = useRef(Date.now());
   const pokeTimes = useRef<number[]>([]);
   const glowEl = useRef<HTMLElement | null>(null);
+  const ballRef = useRef<Ball | null>(null);
   const stateRef = useRef({ mode, sleeping, running: !!run, x: pos.x });
   stateRef.current = { mode, sleeping, running: !!run, x: pos.x };
 
@@ -360,6 +371,119 @@ export function KyroxCompanion({ view }: { view: View }) {
 
   const nextStep = () =>
     tourStep + 1 < TOUR.length ? setTourStep(tourStep + 1) : finishTour();
+
+  // ---- Yarn ball play ------------------------------------------------------
+  const spawnBall = () => {
+    const fromLeft = Math.random() < 0.5;
+    ballRef.current = {
+      x: fromLeft ? -24 : window.innerWidth + 24,
+      vx: fromLeft ? 5 + Math.random() * 2 : -(5 + Math.random() * 2),
+      hits: 0,
+      leaving: false,
+    };
+    setBall({ x: ballRef.current.x });
+    say('Ooh! A ball! 🧶', 'excited', 2200);
+  };
+
+  const kickBall = () => {
+    const b = ballRef.current;
+    if (!b) return;
+    b.vx += (Math.random() < 0.5 ? -1 : 1) * (5 + Math.random() * 3);
+  };
+
+  // Ball physics + chase-and-swipe behaviour, one persistent rAF loop.
+  useEffect(() => {
+    let raf = 0;
+    let chasing = false;
+    const tick = () => {
+      const b = ballRef.current;
+      if (b) {
+        if (stateRef.current.mode === 'tour') {
+          // Tour takes priority — the ball quietly disappears.
+          ballRef.current = null;
+          setBall(null);
+          chasing = false;
+        } else {
+          b.x += b.vx;
+          b.vx *= 0.986;
+          const W = window.innerWidth;
+          if (!b.leaving) {
+            if (b.x < 8) {
+              b.x = 8;
+              b.vx = Math.abs(b.vx) * 0.75;
+            }
+            if (b.x > W - 38) {
+              b.x = W - 38;
+              b.vx = -Math.abs(b.vx) * 0.75;
+            }
+          } else if (b.x < -50 || b.x > W + 50) {
+            ballRef.current = null;
+            setBall(null);
+            chasing = false;
+            moveTo(roamPos());
+            say('Phew! Good game. 🐾', 'happy', 2400);
+            raf = requestAnimationFrame(tick);
+            return;
+          }
+          setBall({ x: b.x });
+
+          // Ball settled → run to it, then swipe it with a paw.
+          if (Math.abs(b.vx) < 0.2 && !chasing && !b.leaving) {
+            chasing = true;
+            const st = stateRef.current;
+            const side: 1 | -1 = b.x > st.x ? -1 : 1;
+            const target = {
+              x: clamp(b.x + side * 58 - 8, 8, window.innerWidth - 100),
+              y: roamPos().y,
+            };
+            const dist = Math.abs(target.x - st.x);
+            const dur = Math.min(1.6, Math.max(0.5, dist / 320));
+            moveTo(target, dur);
+            setTimeout(() => {
+              const bb = ballRef.current;
+              if (!bb) {
+                chasing = false;
+                return;
+              }
+              const dir: 1 | -1 = bb.x >= stateRef.current.x + 46 ? 1 : -1;
+              setSwipeDir(dir);
+              setSwipe(true);
+              setTimeout(() => setSwipe(false), 460);
+              bb.hits += 1;
+              if (bb.hits >= 4) {
+                bb.leaving = true;
+                bb.vx = dir * 14;
+              } else {
+                bb.vx = dir * (6 + Math.random() * 3);
+              }
+              setTimeout(() => {
+                chasing = false;
+              }, 520);
+            }, dur * 1000 + 80);
+          }
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // A ball shows up now and then while he's roaming awake.
+  useEffect(() => {
+    let t: Timer;
+    const schedule = (d: number) => {
+      t = setTimeout(() => {
+        const st = stateRef.current;
+        if (st.mode === 'roam' && !st.sleeping && !ballRef.current) spawnBall();
+        schedule(50000 + Math.random() * 40000);
+      }, d);
+    };
+    schedule(20000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // First visit on the menu → start the guided tour. Returning users get a hello.
   useEffect(() => {
@@ -419,7 +543,7 @@ export function KyroxCompanion({ view }: { view: View }) {
     const schedule = () => {
       t = setTimeout(() => {
         const st = stateRef.current;
-        if (st.mode === 'roam' && !st.sleeping && !st.running) {
+        if (st.mode === 'roam' && !st.sleeping && !st.running && !ballRef.current) {
           const margin = 18;
           const max = Math.max(margin, window.innerWidth - 150);
           let target = margin + Math.random() * (max - margin);
@@ -444,7 +568,7 @@ export function KyroxCompanion({ view }: { view: View }) {
     const schedule = (d: number) => {
       t = setTimeout(() => {
         const st = stateRef.current;
-        if (st.mode === 'roam' && !st.sleeping) {
+        if (st.mode === 'roam' && !st.sleeping && !ballRef.current) {
           const tip = IDLE_TIPS[(Math.random() * IDLE_TIPS.length) | 0];
           say(tip.text, tip.emotion, 6000);
         }
@@ -460,7 +584,7 @@ export function KyroxCompanion({ view }: { view: View }) {
   useEffect(() => {
     const id = setInterval(() => {
       const st = stateRef.current;
-      if (st.mode === 'roam' && !st.sleeping && !st.running && Date.now() - lastPoke.current > 80000) {
+      if (st.mode === 'roam' && !st.sleeping && !st.running && !ballRef.current && Date.now() - lastPoke.current > 80000) {
         say('*yawn*… nap time 🥱', 'sleepy', 2400);
         setTimeout(() => {
           if (Date.now() - lastPoke.current > 80000) setSleeping(true);
@@ -510,66 +634,97 @@ export function KyroxCompanion({ view }: { view: View }) {
   const step = mode === 'tour' ? TOUR[tourStep] : null;
   const displayLine = step ? step.text : sleeping ? null : line;
   const typed = useTyped(displayLine);
-  const emo: Emotion = step ? step.emotion : sleeping ? 'sleepy' : emotion;
+  const emo: Emotion = step ? step.emotion : sleeping ? 'sleepy' : ball ? 'excited' : emotion;
+
+  // While a ball is in play, his eyes lock onto it instead of the cursor.
+  const ballGaze: Gaze | null = ball
+    ? { dx: clamp((ball.x - (pos.x + 46)) / 60, -3.5, 3.5), dy: 2.5 }
+    : null;
 
   return (
-    <div
-      ref={wrapRef}
-      className={`companion ${pos.x < 290 ? 'flip' : ''}`}
-      style={{
-        left: pos.x,
-        top: pos.y,
-        transition: run
-          ? `left ${run.dur}s cubic-bezier(0.45, 0.05, 0.55, 0.95), top ${run.dur}s cubic-bezier(0.45, 0.05, 0.55, 0.95)`
-          : undefined,
-      }}
-    >
-      {displayLine && (
-        <div className="bubble">
-          {typed}
-          {typed.length < displayLine.length && <span className="caret">▌</span>}
-          {step && (
-            <div className="bubble-actions">
-              <button className="btn btn-mini" onClick={finishTour}>
-                Skip
-              </button>
-              <button className="btn btn-primary btn-mini" onClick={nextStep}>
-                {tourStep + 1 < TOUR.length ? 'Next ›' : 'Done'}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-      {sleeping && (
-        <span className="zzz" aria-hidden>
-          <i>z</i>
-          <i>z</i>
-          <i>z</i>
-        </span>
-      )}
+    <>
       <div
-        className="k-stage mini"
-        style={run ? ({ '--dir': run.dir } as React.CSSProperties) : undefined}
+        ref={wrapRef}
+        className={`companion ${pos.x < 290 ? 'flip' : ''}`}
+        style={{
+          left: pos.x,
+          top: pos.y,
+          transition: run
+            ? `left ${run.dur}s cubic-bezier(0.45, 0.05, 0.55, 0.95), top ${run.dur}s cubic-bezier(0.45, 0.05, 0.55, 0.95)`
+            : undefined,
+        }}
       >
-        <button
-          key={pokeN}
-          className={`kyrox ${pokeN > 0 ? 'poked' : ''} ${run ? 'run' : ''} ${
-            displayLine ? 'talk' : ''
-          }`}
-          onClick={poke}
-          onDoubleClick={view === 'menu' && mode === 'roam' ? startTour : undefined}
-          aria-label="Kyrox"
-        >
-          <KyroxAvatar emotion={emo} gaze={sleeping ? NO_GAZE : gaze} />
-        </button>
-        {pokeN > 0 && !run && (
-          <span key={`st-${pokeN}`} className="poke-stars">
-            <i>✦</i>
-            <i>✧</i>
-            <i>✦</i>
+        {displayLine && (
+          <div className="bubble">
+            {typed}
+            {typed.length < displayLine.length && <span className="caret">▌</span>}
+            {step && (
+              <div className="bubble-actions">
+                <button className="btn btn-mini" onClick={finishTour}>
+                  Skip
+                </button>
+                <button className="btn btn-primary btn-mini" onClick={nextStep}>
+                  {tourStep + 1 < TOUR.length ? 'Next ›' : 'Done'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        {sleeping && (
+          <span className="zzz" aria-hidden>
+            <i>z</i>
+            <i>z</i>
+            <i>z</i>
           </span>
         )}
+        <div
+          className="k-stage mini"
+          style={{ '--dir': run ? run.dir : swipeDir } as React.CSSProperties}
+        >
+          <button
+            key={pokeN}
+            className={`kyrox ${pokeN > 0 ? 'poked' : ''} ${run ? 'run' : ''} ${
+              swipe ? 'swipe' : ''
+            } ${displayLine ? 'talk' : ''}`}
+            onClick={poke}
+            onDoubleClick={view === 'menu' && mode === 'roam' ? startTour : undefined}
+            aria-label="Kyrox"
+          >
+            <KyroxAvatar emotion={emo} gaze={sleeping ? NO_GAZE : ballGaze ?? gaze} />
+          </button>
+          {pokeN > 0 && !run && (
+            <span key={`st-${pokeN}`} className="poke-stars">
+              <i>✦</i>
+              <i>✧</i>
+              <i>✦</i>
+            </span>
+          )}
+        </div>
       </div>
-    </div>
+      {ball && (
+        <button
+          className="yarn"
+          style={{ left: ball.x, transform: `rotate(${ball.x * 2.2}deg)` }}
+          onClick={kickBall}
+          aria-label="Yarn ball"
+        >
+          <svg viewBox="0 0 30 30">
+            <defs>
+              <radialGradient id="yarnG" cx="35%" cy="30%" r="80%">
+                <stop offset="0" stopColor="#a78bff" />
+                <stop offset="1" stopColor="#6a48e8" />
+              </radialGradient>
+            </defs>
+            <circle cx="15" cy="15" r="13" fill="url(#yarnG)" />
+            <path
+              d="M3,12 Q15,4 27,12 M3,18 Q15,26 27,18 M9,3.5 Q4,15 9,26.5 M21,3.5 Q26,15 21,26.5"
+              stroke="rgba(255,255,255,0.35)"
+              strokeWidth="1.4"
+              fill="none"
+            />
+          </svg>
+        </button>
+      )}
+    </>
   );
 }

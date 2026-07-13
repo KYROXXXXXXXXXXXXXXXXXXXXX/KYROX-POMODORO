@@ -30,11 +30,28 @@ if (!CLIENT_ID || !CLIENT_SECRET) {
   console.warn('[warn] VITE_DISCORD_CLIENT_ID / DISCORD_CLIENT_SECRET manquants — l’échange de token échouera.');
 }
 
-// Build the Word Bomb dictionary + playable syllables once at startup.
-console.log('[bomb] indexation du dictionnaire…');
-const t0 = Date.now();
-const { dict: DICT, syllables: SYLLABLES } = buildIndex(frenchWords);
-console.log(`[bomb] ${DICT.size} mots, ${SYLLABLES.length} syllabes jouables (${Date.now() - t0}ms)`);
+// Build one Word Bomb index per language once at startup.
+const englishWords = JSON.parse(fs.readFileSync(path.join(__dirname, 'data/english.json'), 'utf8'));
+const arabicWords = fs
+  .readFileSync(path.join(__dirname, 'data/arabic.txt'), 'utf8')
+  .split(/\r?\n/)
+  .filter(Boolean);
+
+const INDEXES = {};
+for (const [lang, words] of [
+  ['fr', frenchWords],
+  ['en', englishWords],
+  ['ar', arabicWords],
+]) {
+  const t0 = Date.now();
+  INDEXES[lang] = buildIndex(words, lang);
+  console.log(
+    `[bomb] ${lang}: ${INDEXES[lang].dict.size} words, tiers ${INDEXES[lang].tiers
+      .map((t) => t.length)
+      .join('/')} (${Date.now() - t0}ms)`,
+  );
+}
+const indexFor = (b) => INDEXES[b.lang] ?? INDEXES.en;
 
 // ===========================================================================
 // Express: OAuth token exchange + serve the built client
@@ -120,6 +137,9 @@ function bombView(inst) {
   }));
   return {
     phase: b.phase,
+    lang: b.lang,
+    difficulty: b.difficulty,
+    level: b.level,
     syllable: b.syllable,
     turnEndsAt: b.turnEndsAt,
     turnMs: b.turnMs,
@@ -224,10 +244,11 @@ function applyCommand(inst, ws, cmd) {
       break;
     case 'bomb':
       if (cmd.action === 'start') {
-        startBomb(inst.bomb, players(inst).map((p) => p.id), SYLLABLES, cmd);
+        const lang = ['en', 'fr', 'ar'].includes(cmd.lang) ? cmd.lang : 'en';
+        startBomb(inst.bomb, players(inst).map((p) => p.id), INDEXES[lang], { ...cmd, lang });
       } else if (cmd.action === 'submit') {
         const me = inst.sockets.get(ws);
-        if (me) submitWord(inst.bomb, DICT, SYLLABLES, me.id, cmd.word);
+        if (me) submitWord(inst.bomb, indexFor(inst.bomb), me.id, cmd.word);
       } else if (cmd.action === 'reset') {
         resetBomb(inst.bomb);
       }
@@ -246,7 +267,7 @@ setInterval(() => {
       pomoAdvance(s);
       changed = true;
     }
-    if (timeoutTick(inst.bomb, SYLLABLES, (pid) => nameOf(inst, pid))) changed = true;
+    if (timeoutTick(inst.bomb, indexFor(inst.bomb), (pid) => nameOf(inst, pid))) changed = true;
     if (changed) broadcast(id);
   }
 }, 500);
@@ -278,7 +299,7 @@ wss.on('connection', (ws, req) => {
   ws.on('close', () => {
     const me = inst.sockets.get(ws);
     inst.sockets.delete(ws);
-    if (me) handleLeave(inst.bomb, SYLLABLES, me.id);
+    if (me) handleLeave(inst.bomb, indexFor(inst.bomb), me.id);
     if (inst.sockets.size === 0) {
       setTimeout(() => {
         if (inst.sockets.size === 0) instances.delete(instanceId);

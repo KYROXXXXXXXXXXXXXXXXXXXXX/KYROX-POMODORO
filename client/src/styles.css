@@ -405,7 +405,6 @@ body::after {
 }
 .game-card {
   position: relative;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -417,17 +416,40 @@ body::after {
   border-radius: 18px;
   color: var(--text);
   cursor: pointer;
-  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease,
+  /* 3D: leans toward the cursor, children float above the surface */
+  transform: perspective(700px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg))
+    translateY(var(--lift, 0px));
+  transform-style: preserve-3d;
+  will-change: transform;
+  transition: transform 0.14s ease-out, border-color 0.16s ease, box-shadow 0.16s ease,
     background 0.16s ease;
 }
+/* Glare highlight following the cursor */
+.game-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    230px circle at var(--gx, 50%) var(--gy, 50%),
+    rgba(255, 255, 255, 0.13),
+    transparent 62%
+  );
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.game-card:hover::before {
+  opacity: 1;
+}
 .game-card:not(.locked):hover {
-  transform: translateY(-3px);
+  --lift: -4px;
   background: var(--card-strong);
   border-color: var(--accent-zone, var(--line-strong));
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.45), 0 0 26px var(--accent-soft, transparent);
 }
 .game-card:not(.locked):hover .gc-icon {
-  transform: scale(1.12) translateY(-2px);
+  transform: translateZ(30px) scale(1.1);
 }
 .gc-icon {
   width: 56px;
@@ -439,17 +461,20 @@ body::after {
   border: 1px solid var(--line-strong);
   border-radius: 16px;
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+  transform: translateZ(24px);
   transition: transform 0.18s ease;
 }
 .gc-title {
   font-size: 17px;
   font-weight: 700;
   color: var(--text-bright);
+  transform: translateZ(18px);
 }
 .gc-desc {
   font-size: 12.5px;
   color: var(--text-dim);
   line-height: 1.45;
+  transform: translateZ(10px);
 }
 .game-card.locked {
   opacity: 0.5;
@@ -459,14 +484,19 @@ body::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(110deg, transparent 42%, rgba(255, 255, 255, 0.05) 50%, transparent 58%);
-  transform: translateX(-100%);
+  border-radius: inherit;
+  background: linear-gradient(110deg, transparent 42%, rgba(255, 255, 255, 0.05) 50%, transparent 58%)
+    no-repeat;
+  background-size: 250% 100%;
   animation: card-shimmer 3.4s ease-in-out infinite;
+  pointer-events: none;
 }
 @keyframes card-shimmer {
-  55%,
-  100% {
-    transform: translateX(100%);
+  from {
+    background-position: 130% 0;
+  }
+  to {
+    background-position: -130% 0;
   }
 }
 .gc-lock {
@@ -627,6 +657,70 @@ input:focus,
 }
 .hearts.dead {
   color: var(--text-dim);
+}
+
+/* Lobby option pickers (language, difficulty) */
+.opt-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.opt-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.opt-row {
+  display: flex;
+  gap: 8px;
+}
+.opt-pill {
+  flex: 1;
+  padding: 10px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  background: var(--card);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease,
+    transform 0.12s ease;
+}
+.opt-pill:hover {
+  background: var(--card-strong);
+}
+.opt-pill:active {
+  transform: translateY(1px);
+}
+.opt-pill.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 16px rgba(124, 92, 255, 0.35);
+}
+[data-theme='crimson'] .opt-pill.active {
+  color: #2a0a12;
+  background: linear-gradient(180deg, #ececf1, #c2c2cb);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+/* In-game badges (language + current difficulty level) */
+.bomb-badges {
+  display: flex;
+  gap: 8px;
+}
+.badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--card);
+  color: var(--text);
 }
 
 .bomb-stage {
@@ -941,11 +1035,53 @@ input:focus,
 }
 /* The card Kyrox is explaining lights up */
 .game-card.tour-glow {
+  --lift: -3px;
   border-color: var(--accent-zone, var(--accent));
   box-shadow: 0 0 0 2px var(--accent-zone, var(--accent)),
     0 0 30px var(--accent-soft, rgba(124, 92, 255, 0.3));
-  transform: translateY(-3px);
   opacity: 1;
+}
+
+/* ---- Yarn ball ------------------------------------------------------------- */
+.yarn {
+  position: fixed;
+  bottom: 16px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  z-index: 39;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.45));
+}
+.yarn svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+/* Paw swipe when he hits the ball */
+.kyrox.swipe {
+  animation: cat-swipe 0.45s ease;
+}
+@keyframes cat-swipe {
+  30% {
+    transform: translateY(-6px) rotate(calc(var(--dir, 1) * -8deg)) scale(1.04, 0.96);
+  }
+  60% {
+    transform: translateY(0) rotate(calc(var(--dir, 1) * 6deg));
+  }
+}
+.kyrox.swipe .k-arm {
+  animation: paw-swipe 0.45s ease;
+}
+@keyframes paw-swipe {
+  40% {
+    transform: rotate(-42deg);
+  }
+  70% {
+    transform: rotate(24deg);
+  }
 }
 
 /* Scampering: hops while the wrapper slides, leaning into the direction. */

@@ -8,6 +8,23 @@ import { KyroxCompanion } from './Kyrox';
 // Per-device visual theme: midnight (dark blue/violet) or crimson (maroon/silver).
 type Theme = 'midnight' | 'crimson';
 
+// 3D tilt: cards lean toward the cursor, with a glare highlight following it.
+function tiltMove(e: React.MouseEvent<HTMLElement>) {
+  const el = e.currentTarget;
+  const r = el.getBoundingClientRect();
+  const px = (e.clientX - r.left) / r.width;
+  const py = (e.clientY - r.top) / r.height;
+  el.style.setProperty('--ry', `${((px - 0.5) * 14).toFixed(2)}deg`);
+  el.style.setProperty('--rx', `${((0.5 - py) * 12).toFixed(2)}deg`);
+  el.style.setProperty('--gx', `${(px * 100).toFixed(1)}%`);
+  el.style.setProperty('--gy', `${(py * 100).toFixed(1)}%`);
+}
+function tiltReset(e: React.MouseEvent<HTMLElement>) {
+  const el = e.currentTarget;
+  el.style.setProperty('--ry', '0deg');
+  el.style.setProperty('--rx', '0deg');
+}
+
 function Header({ theme, onToggleTheme }: { theme?: Theme; onToggleTheme?: () => void }) {
   return (
     <header className="header">
@@ -71,7 +88,7 @@ function LockedCard({
   tour: string;
 }) {
   return (
-    <div className="game-card locked" data-tour={tour}>
+    <div className="game-card locked" data-tour={tour} onMouseMove={tiltMove} onMouseLeave={tiltReset}>
       <span className="gc-icon">{icon}</span>
       <span className="gc-title serif">{title}</span>
       <span className="gc-desc">{desc}</span>
@@ -90,7 +107,13 @@ function Dashboard({ sync, players }: { sync: Sync; players: Player[] }) {
       <section className="zone">
         <h3 className="zone-title serif">🎯 Focus</h3>
         <div className="menu three">
-          <button className="game-card" data-tour="pomodoro" onClick={() => sync.setView('pomodoro')}>
+          <button
+            className="game-card"
+            data-tour="pomodoro"
+            onClick={() => sync.setView('pomodoro')}
+            onMouseMove={tiltMove}
+            onMouseLeave={tiltReset}
+          >
             <span className="gc-icon">⏳</span>
             <span className="gc-title serif">Pomodoro</span>
             <span className="gc-desc">Synced focus timer to study together.</span>
@@ -103,7 +126,13 @@ function Dashboard({ sync, players }: { sync: Sync; players: Player[] }) {
       <section className="zone">
         <h3 className="zone-title serif">🎉 Relax</h3>
         <div className="menu three">
-          <button className="game-card" data-tour="wordbomb" onClick={() => sync.setView('wordbomb')}>
+          <button
+            className="game-card"
+            data-tour="wordbomb"
+            onClick={() => sync.setView('wordbomb')}
+            onMouseMove={tiltMove}
+            onMouseLeave={tiltReset}
+          >
             <span className="gc-icon">💣</span>
             <span className="gc-title serif">Word Bomb</span>
             <span className="gc-desc">Find a word with the syllable before it blows.</span>
