@@ -3,15 +3,12 @@ import { inDiscord, getInstanceId, authenticateUser, type Me } from './discordSd
 import { useGameSync, type Sync, type Player } from './useGameSync';
 import { Pomodoro } from './Pomodoro';
 import { WordBomb } from './WordBomb';
-import { IntroCinematic } from './IntroCinematic';
-import { Kyrox, KyroxCompanion } from './Kyrox';
+import { KyroxCompanion } from './Kyrox';
 
-// The intro plays on every launch (skippable). Kyrox's guided tour plays once
-// per device, then he stays around as the corner companion. Both are overlays:
-// the WebSocket connects underneath while they play.
-type Phase = 'intro' | 'onboarding' | 'main';
+// Per-device visual theme: midnight (dark blue/violet) or crimson (maroon/silver).
+type Theme = 'midnight' | 'crimson';
 
-function Header() {
+function Header({ theme, onToggleTheme }: { theme?: Theme; onToggleTheme?: () => void }) {
   return (
     <header className="header">
       <img className="logo" src="/logo.png" alt="StudySouk Academy" />
@@ -19,6 +16,16 @@ function Header() {
         <span className="wm-title">StudySouk</span>
         <span className="wm-sub">#Academy</span>
       </div>
+      {onToggleTheme && (
+        <button
+          className="theme-toggle"
+          onClick={onToggleTheme}
+          title={theme === 'midnight' ? 'Switch to Crimson theme' : 'Switch to Midnight theme'}
+          aria-label="Switch theme"
+        >
+          {theme === 'midnight' ? '🌙' : '🍷'}
+        </button>
+      )}
     </header>
   );
 }
@@ -52,9 +59,19 @@ function BrowserHint() {
   );
 }
 
-function LockedCard({ icon, title, desc }: { icon: string; title: string; desc: string }) {
+function LockedCard({
+  icon,
+  title,
+  desc,
+  tour,
+}: {
+  icon: string;
+  title: string;
+  desc: string;
+  tour: string;
+}) {
   return (
-    <div className="game-card locked">
+    <div className="game-card locked" data-tour={tour}>
       <span className="gc-icon">{icon}</span>
       <span className="gc-title serif">{title}</span>
       <span className="gc-desc">{desc}</span>
@@ -73,26 +90,26 @@ function Dashboard({ sync, players }: { sync: Sync; players: Player[] }) {
       <section className="zone">
         <h3 className="zone-title serif">🎯 Focus</h3>
         <div className="menu three">
-          <button className="game-card" onClick={() => sync.setView('pomodoro')}>
+          <button className="game-card" data-tour="pomodoro" onClick={() => sync.setView('pomodoro')}>
             <span className="gc-icon">⏳</span>
             <span className="gc-title serif">Pomodoro</span>
             <span className="gc-desc">Synced focus timer to study together.</span>
           </button>
-          <LockedCard icon="🎧" title="Ambience" desc="Lofi, rain, nature — to back your session." />
-          <LockedCard icon="📚" title="Sources" desc="Resource library for studying." />
+          <LockedCard icon="🎧" title="Ambience" desc="Lofi, rain, nature — to back your session." tour="ambience" />
+          <LockedCard icon="📚" title="Sources" desc="Resource library for studying." tour="sources" />
         </div>
       </section>
 
       <section className="zone">
         <h3 className="zone-title serif">🎉 Relax</h3>
         <div className="menu three">
-          <button className="game-card" onClick={() => sync.setView('wordbomb')}>
+          <button className="game-card" data-tour="wordbomb" onClick={() => sync.setView('wordbomb')}>
             <span className="gc-icon">💣</span>
             <span className="gc-title serif">Word Bomb</span>
             <span className="gc-desc">Find a word with the syllable before it blows.</span>
           </button>
-          <LockedCard icon="🃏" title="Karta Lmaghribiya" desc="Ronda and other Moroccan card games." />
-          <LockedCard icon="🕵️" title="Mafia" desc="Social deduction with friends — bluff well." />
+          <LockedCard icon="🃏" title="Karta Lmaghribiya" desc="Ronda and other Moroccan card games." tour="karta" />
+          <LockedCard icon="🕵️" title="Mafia" desc="Social deduction with friends — bluff well." tour="mafia" />
         </div>
       </section>
 
@@ -107,7 +124,15 @@ export default function App() {
   const [me, setMe] = useState<Me | null>(() =>
     inDiscord ? { id: `guest-${Math.random().toString(36).slice(2, 8)}`, name: 'Guest' } : null,
   );
-  const [phase, setPhase] = useState<Phase>('intro');
+  const [theme, setTheme] = useState<Theme>(
+    () => (localStorage.getItem('ss-theme') as Theme) || 'midnight',
+  );
+
+  // Apply the theme to the whole document (onboarding included).
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('ss-theme', theme);
+  }, [theme]);
 
   // Upgrade the guest name to the real Discord name in the background.
   useEffect(() => {
@@ -128,33 +153,15 @@ export default function App() {
   const sync = useGameSync(instanceId, me);
 
   if (!inDiscord) return <BrowserHint />;
-
-  if (phase === 'intro') {
-    return (
-      <IntroCinematic
-        onDone={() =>
-          setPhase(localStorage.getItem('kyrox-onboard-v3') === '1' ? 'main' : 'onboarding')
-        }
-      />
-    );
-  }
-  if (phase === 'onboarding') {
-    return (
-      <Kyrox
-        onDone={() => {
-          localStorage.setItem('kyrox-onboard-v3', '1');
-          setPhase('main');
-        }}
-      />
-    );
-  }
-
   if (!sync.snap) return <Loading />;
 
   const { snap } = sync;
   return (
     <div className="app">
-      <Header />
+      <Header
+        theme={theme}
+        onToggleTheme={() => setTheme((t) => (t === 'midnight' ? 'crimson' : 'midnight'))}
+      />
       {snap.view !== 'menu' && (
         <button className="back" onClick={() => sync.setView('menu')}>
           ‹ Menu
@@ -163,7 +170,7 @@ export default function App() {
       {snap.view === 'menu' && <Dashboard sync={sync} players={snap.players} />}
       {snap.view === 'pomodoro' && <Pomodoro sync={sync} />}
       {snap.view === 'wordbomb' && <WordBomb sync={sync} me={me!} />}
-      <KyroxCompanion />
+      <KyroxCompanion view={snap.view} />
     </div>
   );
 }

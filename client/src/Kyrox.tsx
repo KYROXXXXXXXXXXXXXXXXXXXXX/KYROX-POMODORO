@@ -1,46 +1,71 @@
 import { useEffect, useRef, useState } from 'react';
+import type { View } from './useGameSync';
 
-// Kyrox: a black anime cat drawn in SVG. Amber eyes that follow the mouse,
-// swaying tail, twitching ears, waving paw. Two roles:
-//  - <Kyrox>          full-screen onboarding tour (plays once per device)
-//  - <KyroxCompanion> persistent buddy: wanders along the bottom of the
-//    screen, drops tips, dozes off when ignored, reacts when clicked.
+// Kyrox: a black anime cat living INSIDE the app. He greets you, walks from
+// card to card on the main menu to explain each one (the card lights up),
+// comments when you change screens, wanders around, yawns, sleeps when
+// ignored, and reacts when poked. Double-click him on the menu to replay
+// the tour.
 
 type Emotion = 'happy' | 'excited' | 'thinking' | 'laughing' | 'surprised' | 'focused' | 'sleepy';
-type Spot = 'center' | 'left' | 'right' | 'bottom-left';
 type Gaze = { dx: number; dy: number };
 type Timer = ReturnType<typeof setTimeout>;
 
 const NO_GAZE: Gaze = { dx: 0, dy: 0 };
+const TOUR_KEY = 'kyrox-tour-v1';
 
-const SCRIPT: { text: string; emotion: Emotion; spot: Spot }[] = [
-  { text: "Hey! I'm Kyrox! Welcome aboard ✨", emotion: 'excited', spot: 'center' },
+interface TourStep {
+  target: string | null; // matches data-tour="..." on a dashboard card
+  text: string;
+  emotion: Emotion;
+}
+
+const TOUR: TourStep[] = [
   {
-    text: "I'm the cat of the house. Go ahead, pet me — I dare you.",
-    emotion: 'laughing',
-    spot: 'left',
-  },
-  {
-    text: 'Two worlds here. The Focus side: synced Pomodoro, calm music… serious business.',
-    emotion: 'focused',
-    spot: 'right',
-  },
-  {
-    text: 'And the Relax side: Word Bomb, Moroccan card games, Mafia… where the fun happens 😎',
+    target: null,
+    text: "Hey! I'm Kyrox 🐾 New here? Follow me, I'll show you around!",
     emotion: 'excited',
-    spot: 'bottom-left',
   },
   {
-    text: 'The magic part: everyone in the voice channel sees the same thing, live. Ready?',
+    target: 'pomodoro',
+    text: 'The Pomodoro — one shared timer for the whole room. When it runs, everyone focuses together.',
+    emotion: 'focused',
+  },
+  {
+    target: 'ambience',
+    text: 'Ambience — lofi, rain and nature sounds to back your sessions. Coming soon!',
     emotion: 'happy',
-    spot: 'center',
+  },
+  {
+    target: 'sources',
+    text: 'Sources — a library of study resources. Also on the way.',
+    emotion: 'thinking',
+  },
+  {
+    target: 'wordbomb',
+    text: 'Word Bomb! Find a word containing the syllable before it blows. Last one standing wins.',
+    emotion: 'excited',
+  },
+  {
+    target: 'karta',
+    text: 'Karta Lmaghribiya — Ronda and other Moroccan card games. Soon!',
+    emotion: 'laughing',
+  },
+  {
+    target: 'mafia',
+    text: 'And Mafia — social deduction with friends. Trust no one. Especially me.',
+    emotion: 'surprised',
+  },
+  {
+    target: null,
+    text: "That's the tour! I'll be wandering around — poke me anytime, or double-click me to replay this.",
+    emotion: 'happy',
   },
 ];
 
 const REACTIONS: { text: string; emotion: Emotion }[] = [
   { text: 'Hey! That tickles 😆', emotion: 'laughing' },
   { text: 'Meow?!', emotion: 'surprised' },
-  { text: 'Again?!', emotion: 'surprised' },
   { text: "You just can't help yourself, huh?", emotion: 'laughing' },
   { text: "I'm purring… okay, maybe not.", emotion: 'happy' },
   { text: 'Careful with the fur!', emotion: 'focused' },
@@ -54,6 +79,11 @@ const IDLE_TIPS: { text: string; emotion: Emotion }[] = [
   { text: 'Focus now, brag later.', emotion: 'focused' },
   { text: 'Invite a friend — everything here is better in a group.', emotion: 'excited' },
 ];
+
+const VIEW_LINES: Partial<Record<View, { text: string; emotion: Emotion }>> = {
+  pomodoro: { text: "Focus mode! I'll keep quiet… mostly. 😌", emotion: 'focused' },
+  wordbomb: { text: 'Game time! Show them your vocabulary, human.', emotion: 'excited' },
+};
 
 // Pupils track the cursor, scaled by distance to the cat.
 function useMouseGaze(ref: React.RefObject<HTMLElement | null>): Gaze {
@@ -80,6 +110,22 @@ function useMouseGaze(ref: React.RefObject<HTMLElement | null>): Gaze {
     };
   }, [ref]);
   return gaze;
+}
+
+function useTyped(line: string | null): string {
+  const [typed, setTyped] = useState('');
+  useEffect(() => {
+    setTyped('');
+    if (!line) return;
+    let i = 0;
+    const id = setInterval(() => {
+      i++;
+      setTyped(line.slice(0, i));
+      if (i >= line.length) clearInterval(id);
+    }, 16);
+    return () => clearInterval(id);
+  }, [line]);
+  return typed;
 }
 
 function Face({ emotion, gaze }: { emotion: Emotion; gaze: Gaze }) {
@@ -183,7 +229,6 @@ function Face({ emotion, gaze }: { emotion: Emotion; gaze: Gaze }) {
 export function KyroxAvatar({ emotion, gaze = NO_GAZE }: { emotion: Emotion; gaze?: Gaze }) {
   return (
     <svg viewBox="0 0 200 210" className="k-svg" aria-hidden>
-      {/* tail (behind everything, sways) */}
       <g className="k-tail">
         <path
           d="M150,180 C185,175 192,140 178,118"
@@ -193,11 +238,9 @@ export function KyroxAvatar({ emotion, gaze = NO_GAZE }: { emotion: Emotion; gaz
           strokeLinecap="round"
         />
       </g>
-      {/* body + front paws */}
       <ellipse cx="100" cy="172" rx="50" ry="36" fill="#1a1420" />
       <ellipse cx="82" cy="201" rx="14" ry="8" fill="#241c2b" />
       <ellipse cx="118" cy="201" rx="14" ry="8" fill="#241c2b" />
-      {/* ears (they twitch) */}
       <g className="k-ear-l">
         <path d="M52,62 L44,14 L90,38 Z" fill="#1a1420" />
         <path d="M56,54 L51,26 L79,40 Z" fill="#7e3a4a" />
@@ -206,11 +249,8 @@ export function KyroxAvatar({ emotion, gaze = NO_GAZE }: { emotion: Emotion; gaz
         <path d="M148,62 L156,14 L110,38 Z" fill="#1a1420" />
         <path d="M144,54 L149,26 L121,40 Z" fill="#7e3a4a" />
       </g>
-      {/* head */}
       <ellipse cx="100" cy="94" rx="54" ry="50" fill="#1a1420" />
-      {/* face */}
       <Face emotion={emotion} gaze={gaze} />
-      {/* nose + whiskers */}
       <path d="M95,124 L105,124 L100,131 Z" fill="#d98a96" />
       <g stroke="rgba(216,216,222,0.5)" strokeWidth="1.5" strokeLinecap="round">
         <line x1="60" y1="122" x2="28" y2="116" />
@@ -218,15 +258,12 @@ export function KyroxAvatar({ emotion, gaze = NO_GAZE }: { emotion: Emotion; gaz
         <line x1="140" y1="122" x2="172" y2="116" />
         <line x1="138" y1="130" x2="170" y2="132" />
       </g>
-      {/* collar + silver tag */}
       <path
         d="M62,138 C80,150 120,150 138,138 L136,149 C118,159 82,159 64,149 Z"
-        fill="#4e1322"
-        stroke="#6b2436"
+        style={{ fill: 'var(--collar)', stroke: 'var(--collar-stroke)' }}
         strokeWidth="1"
       />
       <circle cx="100" cy="154" r="6" fill="#d8d8de" stroke="#8b8b96" strokeWidth="1.5" />
-      {/* right paw — waves when excited */}
       <g className={`k-arm ${emotion === 'excited' ? 'wave' : ''}`}>
         <path
           d="M138,168 C152,164 158,150 158,138"
@@ -241,100 +278,37 @@ export function KyroxAvatar({ emotion, gaze = NO_GAZE }: { emotion: Emotion; gaz
   );
 }
 
-// ---- Full-screen onboarding tour ------------------------------------------
-export function Kyrox({ onDone }: { onDone: () => void }) {
-  const [step, setStep] = useState(0);
-  const [reaction, setReaction] = useState<{ text: string; emotion: Emotion } | null>(null);
-  const [pokeN, setPokeN] = useState(0);
-  const [typed, setTyped] = useState('');
-  const [travel, setTravel] = useState(false);
-  const timer = useRef<Timer | null>(null);
-  const stageRef = useRef<HTMLDivElement>(null);
-  const gaze = useMouseGaze(stageRef);
+// ---------------------------------------------------------------------------
+const roamPos = () => ({
+  x: Math.max(16, window.innerWidth - 140),
+  y: window.innerHeight - 110,
+});
 
-  const s = SCRIPT[step];
-  const line = reaction?.text ?? s.text;
-  const emotion = reaction?.emotion ?? s.emotion;
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
-  useEffect(() => {
-    setTyped('');
-    let i = 0;
-    const id = setInterval(() => {
-      i++;
-      setTyped(line.slice(0, i));
-      if (i >= line.length) clearInterval(id);
-    }, 18);
-    return () => clearInterval(id);
-  }, [line]);
-
-  // Hop while he travels to the next spot.
-  useEffect(() => {
-    setTravel(true);
-    const id = setTimeout(() => setTravel(false), 950);
-    return () => clearTimeout(id);
-  }, [s.spot]);
-
-  const poke = () => {
-    setReaction(REACTIONS[(Math.random() * REACTIONS.length) | 0]);
-    setPokeN((n) => n + 1);
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setReaction(null), 1900);
+function targetPos(name: string): { x: number; y: number } | null {
+  const el = document.querySelector<HTMLElement>(`[data-tour="${name}"]`);
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  return {
+    x: clamp(r.right - 78, 8, window.innerWidth - 100),
+    y: clamp(r.bottom - 58, 8, window.innerHeight - 106),
   };
-
-  const next = () => (step + 1 < SCRIPT.length ? setStep(step + 1) : onDone());
-
-  return (
-    <div className="onboard">
-      <div className={`kyrox-wrap spot-${s.spot} ${travel ? 'travel' : ''}`}>
-        <div className="bubble">
-          {typed}
-          {typed.length < line.length && <span className="caret">▌</span>}
-        </div>
-        <div className="k-stage" ref={stageRef}>
-          <div className="k-glow" />
-          <button
-            key={pokeN}
-            className={`kyrox ${pokeN > 0 ? 'poked' : ''}`}
-            onClick={poke}
-            aria-label="Kyrox"
-          >
-            <KyroxAvatar emotion={emotion} gaze={gaze} />
-          </button>
-          {pokeN > 0 && (
-            <span key={`st-${pokeN}`} className="poke-stars">
-              <i>✦</i>
-              <i>✧</i>
-              <i>✦</i>
-            </span>
-          )}
-        </div>
-        <span className="kyrox-name serif">Kyrox</span>
-      </div>
-
-      <div className="onboard-dots">
-        {SCRIPT.map((_, i) => (
-          <span key={i} className={`dot ${i <= step ? 'on' : ''}`} />
-        ))}
-      </div>
-      <div className="onboard-controls">
-        <button className="btn btn-ghost" onClick={onDone}>
-          Skip
-        </button>
-        <button className="btn btn-primary" onClick={next}>
-          {step + 1 < SCRIPT.length ? 'Next ›' : "Let's go!"}
-        </button>
-      </div>
-    </div>
-  );
 }
 
-// ---- Persistent wandering companion -----------------------------------------
-export function KyroxCompanion() {
+const centerStage = () => ({
+  x: window.innerWidth / 2 - 46,
+  y: window.innerHeight * 0.42,
+});
+
+export function KyroxCompanion({ view }: { view: View }) {
+  const [mode, setMode] = useState<'roam' | 'tour'>('roam');
+  const [tourStep, setTourStep] = useState(0);
   const [line, setLine] = useState<string | null>(null);
   const [emotion, setEmotion] = useState<Emotion>('happy');
   const [pokeN, setPokeN] = useState(0);
   const [sleeping, setSleeping] = useState(false);
-  const [x, setX] = useState(() => Math.max(16, window.innerWidth - 140));
+  const [pos, setPos] = useState(roamPos);
   const [run, setRun] = useState<{ dur: number; dir: 1 | -1 } | null>(null);
 
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -343,10 +317,15 @@ export function KyroxCompanion() {
   const hideTimer = useRef<Timer | null>(null);
   const runTimer = useRef<Timer | null>(null);
   const lastPoke = useRef(Date.now());
-  const stateRef = useRef({ sleeping: false, running: false, x: 0 });
-  stateRef.current.sleeping = sleeping;
-  stateRef.current.running = !!run;
-  stateRef.current.x = x;
+  const pokeTimes = useRef<number[]>([]);
+  const glowEl = useRef<HTMLElement | null>(null);
+  const stateRef = useRef({ mode, sleeping, running: !!run, x: pos.x });
+  stateRef.current = { mode, sleeping, running: !!run, x: pos.x };
+
+  const clearGlow = () => {
+    glowEl.current?.classList.remove('tour-glow');
+    glowEl.current = null;
+  };
 
   const say = (text: string, emo: Emotion, ms: number) => {
     setLine(text);
@@ -358,22 +337,95 @@ export function KyroxCompanion() {
     }, ms);
   };
 
-  // Wander: every 9–22s scamper to a random spot along the bottom edge.
+  const moveTo = (p: { x: number; y: number }, dur = 0.9) => {
+    setRun({ dur, dir: p.x >= stateRef.current.x ? 1 : -1 });
+    setPos(p);
+    if (runTimer.current) clearTimeout(runTimer.current);
+    runTimer.current = setTimeout(() => setRun(null), dur * 1000 + 80);
+  };
+
+  const startTour = () => {
+    setSleeping(false);
+    setLine(null);
+    setMode('tour');
+    setTourStep(0);
+  };
+
+  const finishTour = () => {
+    clearGlow();
+    localStorage.setItem(TOUR_KEY, '1');
+    setMode('roam');
+    moveTo(roamPos());
+  };
+
+  const nextStep = () =>
+    tourStep + 1 < TOUR.length ? setTourStep(tourStep + 1) : finishTour();
+
+  // First visit on the menu → start the guided tour. Returning users get a hello.
+  useEffect(() => {
+    if (view !== 'menu') return;
+    const done = localStorage.getItem(TOUR_KEY) === '1';
+    const t = setTimeout(() => {
+      if (stateRef.current.mode === 'tour') return;
+      if (!done) startTour();
+      else say('Hey, welcome back! 🐾', 'excited', 2600);
+    }, 900);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Position + card highlight for the current tour step.
+  useEffect(() => {
+    if (mode !== 'tour') return;
+    const step = TOUR[tourStep];
+    clearGlow();
+    if (step.target) {
+      const el = document.querySelector<HTMLElement>(`[data-tour="${step.target}"]`);
+      if (el) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        el.classList.add('tour-glow');
+        glowEl.current = el;
+      }
+    }
+    const place = () => {
+      const p = step.target ? targetPos(step.target) : centerStage();
+      if (p) moveTo(p);
+    };
+    place();
+    const t = setTimeout(place, 450); // re-measure once scrolling settles
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, tourStep]);
+
+  // React to screen changes; abort the tour if the user navigates away.
+  const prevView = useRef(view);
+  useEffect(() => {
+    if (prevView.current === view) return;
+    prevView.current = view;
+    lastPoke.current = Date.now();
+    setSleeping(false);
+    if (stateRef.current.mode === 'tour') {
+      finishTour();
+      return;
+    }
+    const l = VIEW_LINES[view];
+    if (l) say(l.text, l.emotion, 3500);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view]);
+
+  // Wander along the bottom every 9–22s (roam mode, awake).
   useEffect(() => {
     let t: Timer;
     const schedule = () => {
       t = setTimeout(() => {
         const st = stateRef.current;
-        if (!st.sleeping && !st.running) {
+        if (st.mode === 'roam' && !st.sleeping && !st.running) {
           const margin = 18;
           const max = Math.max(margin, window.innerWidth - 150);
           let target = margin + Math.random() * (max - margin);
           if (Math.abs(target - st.x) < 130) target = st.x > max / 2 ? margin : max;
           const dur = Math.min(3, Math.max(0.8, Math.abs(target - st.x) / 240));
-          setRun({ dur, dir: target > st.x ? 1 : -1 });
-          setX(target);
-          if (runTimer.current) clearTimeout(runTimer.current);
-          runTimer.current = setTimeout(() => setRun(null), dur * 1000 + 80);
+          moveTo({ x: target, y: roamPos().y }, dur);
         }
         schedule();
       }, 9000 + Math.random() * 13000);
@@ -383,56 +435,111 @@ export function KyroxCompanion() {
       clearTimeout(t);
       if (runTimer.current) clearTimeout(runTimer.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Random tips while awake.
+  // Random tips while roaming awake.
   useEffect(() => {
     let t: Timer;
     const schedule = (d: number) => {
       t = setTimeout(() => {
-        if (!stateRef.current.sleeping) {
+        const st = stateRef.current;
+        if (st.mode === 'roam' && !st.sleeping) {
           const tip = IDLE_TIPS[(Math.random() * IDLE_TIPS.length) | 0];
           say(tip.text, tip.emotion, 6000);
         }
         schedule(35000 + Math.random() * 25000);
       }, d);
     };
-    schedule(15000);
+    schedule(18000);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Doze off when ignored for a while.
+  // Yawn, then doze off when ignored for a while.
   useEffect(() => {
     const id = setInterval(() => {
-      if (Date.now() - lastPoke.current > 80000 && !stateRef.current.running) setSleeping(true);
+      const st = stateRef.current;
+      if (st.mode === 'roam' && !st.sleeping && !st.running && Date.now() - lastPoke.current > 80000) {
+        say('*yawn*… nap time 🥱', 'sleepy', 2400);
+        setTimeout(() => {
+          if (Date.now() - lastPoke.current > 80000) setSleeping(true);
+        }, 2400);
+      }
     }, 5000);
     return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Keep him on screen when the window resizes.
+  useEffect(() => {
+    const onResize = () => {
+      const st = stateRef.current;
+      if (st.mode === 'tour') {
+        const step = TOUR[tourStep];
+        const p = step.target ? targetPos(step.target) : centerStage();
+        if (p) setPos(p);
+      } else {
+        setPos(roamPos());
+      }
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [tourStep]);
 
   const poke = () => {
     lastPoke.current = Date.now();
     setPokeN((n) => n + 1);
+    if (mode === 'tour') return; // just bounce, keep explaining
     if (sleeping) {
       setSleeping(false);
       say('Mrrp?! I was napping! 😾', 'surprised', 2400);
+      return;
+    }
+    const now = Date.now();
+    pokeTimes.current = [...pokeTimes.current.filter((t) => now - t < 4000), now];
+    if (pokeTimes.current.length >= 4) {
+      pokeTimes.current = [];
+      say('OKAY okay, I get it! 😾', 'surprised', 2400);
       return;
     }
     const r = REACTIONS[(Math.random() * REACTIONS.length) | 0];
     say(r.text, r.emotion, 2200);
   };
 
-  const emo: Emotion = sleeping ? 'sleepy' : emotion;
+  const step = mode === 'tour' ? TOUR[tourStep] : null;
+  const displayLine = step ? step.text : sleeping ? null : line;
+  const typed = useTyped(displayLine);
+  const emo: Emotion = step ? step.emotion : sleeping ? 'sleepy' : emotion;
+
   return (
     <div
       ref={wrapRef}
-      className={`companion ${x < 270 ? 'flip' : ''}`}
+      className={`companion ${pos.x < 290 ? 'flip' : ''}`}
       style={{
-        left: x,
-        transition: run ? `left ${run.dur}s cubic-bezier(0.45, 0.05, 0.55, 0.95)` : undefined,
+        left: pos.x,
+        top: pos.y,
+        transition: run
+          ? `left ${run.dur}s cubic-bezier(0.45, 0.05, 0.55, 0.95), top ${run.dur}s cubic-bezier(0.45, 0.05, 0.55, 0.95)`
+          : undefined,
       }}
     >
-      {line && !sleeping && <div className="bubble mini">{line}</div>}
+      {displayLine && (
+        <div className="bubble">
+          {typed}
+          {typed.length < displayLine.length && <span className="caret">▌</span>}
+          {step && (
+            <div className="bubble-actions">
+              <button className="btn btn-mini" onClick={finishTour}>
+                Skip
+              </button>
+              <button className="btn btn-primary btn-mini" onClick={nextStep}>
+                {tourStep + 1 < TOUR.length ? 'Next ›' : 'Done'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
       {sleeping && (
         <span className="zzz" aria-hidden>
           <i>z</i>
@@ -447,9 +554,10 @@ export function KyroxCompanion() {
         <button
           key={pokeN}
           className={`kyrox ${pokeN > 0 ? 'poked' : ''} ${run ? 'run' : ''} ${
-            line && !sleeping ? 'talk' : ''
+            displayLine ? 'talk' : ''
           }`}
           onClick={poke}
+          onDoubleClick={view === 'menu' && mode === 'roam' ? startTour : undefined}
           aria-label="Kyrox"
         >
           <KyroxAvatar emotion={emo} gaze={sleeping ? NO_GAZE : gaze} />
