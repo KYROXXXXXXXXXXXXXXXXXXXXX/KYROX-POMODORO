@@ -75,6 +75,64 @@ const GRAB_LINES = ['Hey!! Put me down! 🙀', 'Meooow! I have paws, you know!',
 const DROP_SOFT = ['Hmph. 😾', 'A little warning next time?', '*licks paw with dignity*'];
 const DROP_HARD = ['WHEEE! Do it again! 😆', 'My dignity… 😵', 'I meant to land like that.', '9 lives, minus one.'];
 
+// ---- Living dialogue: context-aware pools ----------------------------------
+const timeOfDay = () => {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) return 'morning';
+  if (h < 18) return 'afternoon';
+  if (h < 23) return 'evening';
+  return 'night';
+};
+
+const GREETINGS: Record<string, { text: string; emotion: Emotion }[]> = {
+  morning: [
+    { text: '*(stretches)* The morning mist is clearing. Let’s conquer today! 🐾', emotion: 'excited' },
+    { text: 'Mrrp… morning, traveler. The lanterns are still warm.', emotion: 'happy' },
+  ],
+  afternoon: [
+    { text: 'Welcome back! The forest is lively this afternoon. 🐾', emotion: 'excited' },
+    { text: '*(his bell tinkles)* Perfect time for a focus round, no?', emotion: 'happy' },
+  ],
+  evening: [
+    { text: 'Evening, traveler. The fireflies are out — good company for studying. ✨', emotion: 'happy' },
+    { text: '*(curls tail neatly)* A calm evening. Let’s make it count.', emotion: 'focused' },
+  ],
+  night: [
+    { text: 'Still working, traveler? The forest is quiet at this hour… 🌙', emotion: 'thinking' },
+    { text: '*(yawns quietly)* Night owls, the both of us.', emotion: 'sleepy' },
+  ],
+};
+
+const FOCUS_START: { text: string; emotion: Emotion }[] = [
+  { text: '*(whispers)* Focus time. I’ll keep the fireflies quiet. 🤫', emotion: 'focused' },
+  { text: 'Deep breath… and in we go. I believe in you.', emotion: 'focused' },
+  { text: '*(settles down beside you)* Go on — I’m watching over the timer.', emotion: 'happy' },
+];
+const FOCUS_DONE: { text: string; emotion: Emotion }[] = [
+  { text: '*(leaps up)* You DID it! One more feather for the wing! 🪶', emotion: 'excited' },
+  { text: 'Session complete! *(proud purring)* Treat yourself, traveler.', emotion: 'excited' },
+  { text: 'Another one down. The forest spirits are impressed. ✨', emotion: 'laughing' },
+];
+const BREAK_LINES: { text: string; emotion: Emotion }[] = [
+  { text: 'Break time! Stretch those paws. And hydrate — humans forget that. 💧', emotion: 'laughing' },
+  { text: '*(rolls onto his back)* Rest is part of the work. Enjoy it.', emotion: 'happy' },
+];
+const PAUSE_LINES: { text: string; emotion: Emotion }[] = [
+  { text: 'Paused? That’s alright. *(gently pats his paws)* Whenever you’re ready.', emotion: 'happy' },
+  { text: 'No judgment here. The timer will wait for you.', emotion: 'thinking' },
+];
+const BOND_UP: { text: string; emotion: Emotion }[] = [
+  { text: '*(his bell tinkles softly)* Our bond grows, traveler. ✨', emotion: 'excited' },
+  { text: 'You and me — a good team. *(happy tail flick)*', emotion: 'happy' },
+];
+
+const pick = <T,>(arr: T[]): T => arr[(Math.random() * arr.length) | 0];
+
+// Micro-actions written *like this* render in italics.
+function richText(s: string) {
+  return s.split('*').map((part, i) => (i % 2 ? <em key={i}>{part}</em> : <span key={i}>{part}</span>));
+}
+
 const IDLE_TIPS: { text: string; emotion: Emotion }[] = [
   { text: 'Tip: start a Pomodoro and the whole room follows the same timer.', emotion: 'thinking' },
   { text: 'Stuck on a syllable? Think plurals and long words.', emotion: 'thinking' },
@@ -138,12 +196,14 @@ function Face({ emotion, gaze }: { emotion: Emotion; gaze: Gaze }) {
     const py = dy + gaze.dy;
     return (
       <g className="k-blink">
-        <ellipse cx="74" cy="104" rx="10.5" ry="12.5" fill="url(#kEye)" />
+        <ellipse cx="74" cy="104" rx="10.5" ry="12.5" fill="url(#kEye)" stroke="#120d14" strokeWidth="1.4" />
         <ellipse cx={74 + px} cy={104 + py} rx="3.2" ry="9.5" fill="#17121a" />
         <circle cx="77.5" cy="99" r="3" fill="#fff" />
-        <ellipse cx="126" cy="104" rx="10.5" ry="12.5" fill="url(#kEye)" />
+        <ellipse cx="70.5" cy="110" rx="3.6" ry="2" fill="rgba(255,255,255,0.3)" />
+        <ellipse cx="126" cy="104" rx="10.5" ry="12.5" fill="url(#kEye)" stroke="#120d14" strokeWidth="1.4" />
         <ellipse cx={126 + px} cy={104 + py} rx="3.2" ry="9.5" fill="#17121a" />
         <circle cx="129.5" cy="99" r="3" fill="#fff" />
+        <ellipse cx="122.5" cy="110" rx="3.6" ry="2" fill="rgba(255,255,255,0.3)" />
       </g>
     );
   };
@@ -230,7 +290,15 @@ function Face({ emotion, gaze }: { emotion: Emotion; gaze: Gaze }) {
   }
 }
 
-export function KyroxAvatar({ emotion, gaze = NO_GAZE }: { emotion: Emotion; gaze?: Gaze }) {
+export function KyroxAvatar({
+  emotion,
+  gaze = NO_GAZE,
+  hat = false,
+}: {
+  emotion: Emotion;
+  gaze?: Gaze;
+  hat?: boolean;
+}) {
   return (
     <svg viewBox="0 0 200 210" className="k-svg" aria-hidden>
       <defs>
@@ -246,7 +314,13 @@ export function KyroxAvatar({ emotion, gaze = NO_GAZE }: { emotion: Emotion; gaz
           <stop offset="0" stopColor="#ffd27a" />
           <stop offset="1" stopColor="#d3922b" />
         </radialGradient>
+        <radialGradient id="kBell" cx="38%" cy="30%" r="80%">
+          <stop offset="0" stopColor="#ffe9a8" />
+          <stop offset="1" stopColor="#c99b3a" />
+        </radialGradient>
       </defs>
+      {/* soft ground shadow */}
+      <ellipse cx="100" cy="205" rx="46" ry="5.5" fill="rgba(0,0,0,0.35)" />
       <g className="k-tail">
         <path
           d="M150,180 C185,175 192,140 178,118"
@@ -292,8 +366,24 @@ export function KyroxAvatar({ emotion, gaze = NO_GAZE }: { emotion: Emotion; gaz
         style={{ fill: 'var(--collar)', stroke: 'var(--collar-stroke)' }}
         strokeWidth="1"
       />
-      <circle cx="100" cy="154" r="6" fill="#e8e8ee" stroke="#8b8b96" strokeWidth="1.5" />
-      <circle cx="98" cy="152" r="2" fill="#ffffff" />
+      {/* golden bell — swings with his movement */}
+      <g className="k-bell">
+        <line x1="100" y1="148" x2="100" y2="153" stroke="#8a6d2f" strokeWidth="2" />
+        <circle cx="100" cy="159" r="7" fill="url(#kBell)" stroke="#8a6d2f" strokeWidth="1.2" />
+        <path d="M94,159 L106,159" stroke="#8a6d2f" strokeWidth="1.2" />
+        <circle cx="100" cy="164" r="2" fill="#7a5c22" />
+        <circle cx="97" cy="156" r="1.8" fill="#fff7dd" />
+      </g>
+      {/* wizard hat — unlocked when your bond grows */}
+      {hat && (
+        <g className="k-hat">
+          <path d="M58,50 Q98,36 134,48 L126,58 Q98,66 66,58 Z" fill="#4a3a8f" />
+          <path d="M76,50 C82,26 104,16 110,4 C116,20 110,38 118,48 Q96,57 76,50 Z" fill="#5a48b0" />
+          <path d="M78,44 Q98,50 114,44 L116,48 Q98,55 77,48 Z" fill="#ffd27a" />
+          <circle cx="110" cy="6" r="4" fill="#ffd27a" />
+          <path d="M88,32 L93,29 L91,35 Z" fill="#ffe9a8" />
+        </g>
+      )}
       <g className={`k-arm ${emotion === 'excited' ? 'wave' : ''}`}>
         <path
           d="M138,168 C152,164 158,150 158,138"
@@ -338,7 +428,13 @@ interface Ball {
   leaving: boolean;
 }
 
-export function KyroxCompanion({ view }: { view: View }) {
+interface PomoInfo {
+  mode: 'focus' | 'short' | 'long';
+  running: boolean;
+  completedFocus: number;
+}
+
+export function KyroxCompanion({ view, pomo }: { view: View; pomo: PomoInfo }) {
   const [mode, setMode] = useState<'roam' | 'tour'>('roam');
   const [tourStep, setTourStep] = useState(0);
   const [line, setLine] = useState<string | null>(null);
@@ -353,6 +449,11 @@ export function KyroxCompanion({ view }: { view: View }) {
   const [held, setHeld] = useState(false);
   const [falling, setFalling] = useState(false);
   const [landing, setLanding] = useState(0);
+  const [anim, setAnim] = useState<'tilt' | 'groom' | null>(null);
+  // Bond: grows with completed sessions (and the odd pet). Level 2+ = wizard hat.
+  const bondRef = useRef(Number(localStorage.getItem('kyrox-bond') || 0));
+  const [hat, setHat] = useState(Math.floor(bondRef.current / 6) >= 2);
+  const lastBondPet = useRef(0);
 
   const wrapRef = useRef<HTMLDivElement>(null);
   const gaze = useMouseGaze(wrapRef);
@@ -570,7 +671,10 @@ export function KyroxCompanion({ view }: { view: View }) {
     const t = setTimeout(() => {
       if (stateRef.current.mode === 'tour') return;
       if (!done) startTour();
-      else say('Hey, welcome back! 🐾', 'excited', 2600);
+      else {
+        const g = pick(GREETINGS[timeOfDay()]);
+        say(g.text, g.emotion, 3600);
+      }
     }, 900);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -598,6 +702,59 @@ export function KyroxCompanion({ view }: { view: View }) {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, tourStep]);
+
+  const addBond = (n: number) => {
+    const before = Math.floor(bondRef.current / 6);
+    bondRef.current += n;
+    localStorage.setItem('kyrox-bond', String(bondRef.current));
+    const after = Math.floor(bondRef.current / 6);
+    if (after > before) {
+      if (after >= 2) setHat(true);
+      const b = pick(BOND_UP);
+      setTimeout(() => say(b.text, b.emotion, 3400), 2800);
+    }
+  };
+
+  // React to the shared Pomodoro: encourage, celebrate, nap during focus.
+  const prevPomo = useRef(pomo);
+  useEffect(() => {
+    const prev = prevPomo.current;
+    prevPomo.current = pomo;
+    const st = stateRef.current;
+    if (st.mode === 'tour' || st.held || st.falling) return;
+    if (pomo.completedFocus > prev.completedFocus) {
+      setSleeping(false);
+      const l = pick(FOCUS_DONE);
+      say(l.text, l.emotion, 4200);
+      addBond(2);
+    } else if (!prev.running && pomo.running && pomo.mode === 'focus') {
+      setSleeping(false);
+      const l = pick(FOCUS_START);
+      say(l.text, l.emotion, 3600);
+    } else if (pomo.running && pomo.mode !== 'focus' && prev.mode === 'focus') {
+      setSleeping(false);
+      const l = pick(BREAK_LINES);
+      say(l.text, l.emotion, 3800);
+    } else if (prev.running && !pomo.running && pomo.mode === 'focus') {
+      const l = pick(PAUSE_LINES);
+      say(l.text, l.emotion, 3400);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pomo.running, pomo.mode, pomo.completedFocus]);
+
+  // During a long focus he curls up and guards your session in his sleep.
+  useEffect(() => {
+    if (!(pomo.running && pomo.mode === 'focus')) return;
+    const t = setTimeout(() => {
+      const st = stateRef.current;
+      if (st.mode === 'roam' && !st.held && !st.falling && !ballRef.current && !st.sleeping) {
+        say('*(curls up beside you)* I’ll guard your focus… *(yawns)*', 'sleepy', 3200);
+        setTimeout(() => setSleeping(true), 3200);
+      }
+    }, 35000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pomo.running, pomo.mode]);
 
   // React to screen changes; abort the tour if the user navigates away.
   const prevView = useRef(view);
@@ -750,9 +907,18 @@ export function KyroxCompanion({ view }: { view: View }) {
     setFalling(true);
   };
 
+  const playAnim = (a: 'tilt' | 'groom', ms: number) => {
+    setAnim(a);
+    setTimeout(() => setAnim(null), ms);
+  };
+
   const poke = () => {
     lastPoke.current = Date.now();
     setPokeN((n) => n + 1);
+    if (Date.now() - lastBondPet.current > 60000) {
+      lastBondPet.current = Date.now();
+      addBond(1);
+    }
     if (mode === 'tour') return; // just bounce, keep explaining
     if (sleeping) {
       setSleeping(false);
@@ -766,8 +932,17 @@ export function KyroxCompanion({ view }: { view: View }) {
       say('OKAY okay, I get it! 😾', 'surprised', 2400);
       return;
     }
-    const r = REACTIONS[(Math.random() * REACTIONS.length) | 0];
-    say(r.text, r.emotion, 2200);
+    const roll = Math.random();
+    if (roll < 0.3) {
+      playAnim('tilt', 1400);
+      say('*(tilts his head, curious)*', 'thinking', 1600);
+    } else if (roll < 0.55) {
+      playAnim('groom', 1700);
+      say('*(cleans his paw, nonchalant)*', 'focused', 1900);
+    } else {
+      const r = REACTIONS[(Math.random() * REACTIONS.length) | 0];
+      say(r.text, r.emotion, 2200);
+    }
   };
 
   // Squash animation right after a landing.
@@ -815,7 +990,7 @@ export function KyroxCompanion({ view }: { view: View }) {
       >
         {displayLine && (
           <div className="bubble">
-            {typed}
+            {richText(typed)}
             {typed.length < displayLine.length && <span className="caret">▌</span>}
             {step && (
               <div className="bubble-actions">
@@ -845,8 +1020,8 @@ export function KyroxCompanion({ view }: { view: View }) {
             className={`kyrox ${pokeN > 0 ? 'poked' : ''} ${run ? 'run' : ''} ${
               swipe ? 'swipe' : ''
             } ${held ? 'held' : ''} ${falling ? 'flying' : ''} ${justLanded ? 'land' : ''} ${
-              displayLine ? 'talk' : ''
-            }`}
+              anim ?? ''
+            } ${displayLine ? 'talk' : ''}`}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
@@ -854,7 +1029,7 @@ export function KyroxCompanion({ view }: { view: View }) {
             onDoubleClick={view === 'menu' && mode === 'roam' ? startTour : undefined}
             aria-label="Kyrox"
           >
-            <KyroxAvatar emotion={emo} gaze={sleeping ? NO_GAZE : ballGaze ?? gaze} />
+            <KyroxAvatar emotion={emo} gaze={sleeping ? NO_GAZE : ballGaze ?? gaze} hat={hat} />
           </button>
           {pokeN > 0 && !run && (
             <span key={`st-${pokeN}`} className="poke-stars">

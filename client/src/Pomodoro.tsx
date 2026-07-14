@@ -32,6 +32,20 @@ function Scene() {
     <div className="pomo-scene" aria-hidden>
       <img src="/scene.jpg" alt="" onError={(e) => (e.currentTarget.style.display = 'none')} />
       <div className="sc-tint" />
+      {/* drifting forest spirits */}
+      <div className="fireflies">
+        {Array.from({ length: 9 }).map((_, i) => (
+          <i
+            key={i}
+            style={{
+              left: `${(i * 13 + 7) % 92}%`,
+              top: `${((i * 29 + 15) % 60) + 12}%`,
+              animationDelay: `${(i * 0.9) % 5}s`,
+              animationDuration: `${6 + (i % 4) * 2.2}s`,
+            }}
+          />
+        ))}
+      </div>
       <div className="sc-vignette" />
     </div>
   );
@@ -78,7 +92,7 @@ export function Pomodoro({ sync }: { sync: Sync }) {
         <div className="goal-bar">
           {Array.from({ length: GOAL }).map((_, i) => (
             <span key={i} className={`goal-dot ${i < p.completedFocus ? 'done' : ''}`}>
-              🍅
+              🪶
             </span>
           ))}
           <span className="goal-label">

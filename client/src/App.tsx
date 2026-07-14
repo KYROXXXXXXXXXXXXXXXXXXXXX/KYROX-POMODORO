@@ -3,12 +3,17 @@ import { inDiscord, getInstanceId, authenticateUser, type Me } from './discordSd
 import { useGameSync, type Player, type View } from './useGameSync';
 import { Pomodoro } from './Pomodoro';
 import { WordBomb } from './WordBomb';
-import { KyroxCompanion } from './Kyrox';
+import { KyroxAvatar, KyroxCompanion } from './Kyrox';
 
 // Per-device visual theme, cycled from the header button.
-type Theme = 'midnight' | 'crimson' | 'sakura';
-const THEME_NEXT: Record<Theme, Theme> = { midnight: 'crimson', crimson: 'sakura', sakura: 'midnight' };
-const THEME_ICON: Record<Theme, string> = { midnight: '🌙', crimson: '🍷', sakura: '🌸' };
+type Theme = 'midnight' | 'crimson' | 'sakura' | 'ocean';
+const THEME_NEXT: Record<Theme, Theme> = {
+  midnight: 'crimson',
+  crimson: 'sakura',
+  sakura: 'ocean',
+  ocean: 'midnight',
+};
+const THEME_ICON: Record<Theme, string> = { midnight: '🌙', crimson: '🍷', sakura: '🌸', ocean: '🌊' };
 
 // 3D tilt: cards lean toward the cursor, with a glare highlight following it.
 function tiltMove(e: React.MouseEvent<HTMLElement>) {
@@ -50,14 +55,35 @@ function Header({ theme, onToggleTheme }: { theme?: Theme; onToggleTheme?: () =>
   );
 }
 
+const LOAD_MSGS = [
+  'Waking up Kyrox… 🐾',
+  'Brushing his fur…',
+  'Lighting the lanterns…',
+  'Rolling out the parchment…',
+  'Sharpening pencils…',
+  'Kyrox is stretching…',
+  'Herding the syllables…',
+];
+
 function Loading() {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setI((v) => (v + 1) % LOAD_MSGS.length), 1100);
+    return () => clearInterval(id);
+  }, []);
   return (
-    <div className="app">
-      <Header />
-      <div className="screen center">
-        <div className="spinner" />
-        <p className="muted">Joining the session…</p>
+    <div className="load-screen">
+      <div className="load-cat">
+        <KyroxAvatar emotion="sleepy" />
       </div>
+      <div className="load-title">
+        Study<span>Souk</span>
+      </div>
+      <div className="load-sub">#ACADEMY · BY KYROX</div>
+      <div className="load-bar">
+        <span />
+      </div>
+      <p className="load-msg">{LOAD_MSGS[i]}</p>
     </div>
   );
 }
@@ -201,7 +227,7 @@ export default function App() {
       {view === 'menu' && <Dashboard onOpen={setView} players={snap.players} />}
       {view === 'pomodoro' && <Pomodoro sync={sync} />}
       {view === 'wordbomb' && <WordBomb sync={sync} me={me!} />}
-      <KyroxCompanion view={view} />
+      <KyroxCompanion view={view} pomo={snap.pomo} />
     </div>
   );
 }
