@@ -216,7 +216,9 @@ export function WordBomb({ sync, me }: { sync: Sync; me: Me }) {
     return (
       <div className="screen bomb">
         <h2 className="serif title">Word Bomb</h2>
-        <p className="muted">Create a room and invite your friends, or join one below.</p>
+        <p className="muted">
+          Create a room or join one — rooms are shared across voice channels and servers. 🌍
+        </p>
 
         <div className="create-row">
           <input

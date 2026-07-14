@@ -100,6 +100,12 @@ const ROOMS_MAX = 20;
 /** @type {Map<string, any>} */
 const instances = new Map();
 
+// Word Bomb rooms are GLOBAL: players from different voice channels or even
+// different Discord servers meet in the same room list. (The Pomodoro stays
+// per voice channel.)
+/** @type {Map<string, any>} */
+const ROOMS = new Map(); // roomId -> { id, name, hostId, bomb, chat }
+
 function freshInstance() {
   return {
     pomo: {
@@ -111,7 +117,6 @@ function freshInstance() {
       durations: { ...POMO_DEFAULTS.durations },
       longEvery: POMO_DEFAULTS.longEvery,
     },
-    rooms: new Map(), // roomId -> { id, name, hostId, bomb, chat }
     sockets: new Map(), // ws -> { id, name, roomId } | null until 'hello'
   };
 }
@@ -126,38 +131,46 @@ function getInstance(id) {
 }
 
 const players = (inst) => [...inst.sockets.values()].filter((p) => p && p.id);
-const nameOf = (inst, id) => players(inst).find((p) => p.id === id)?.name ?? 'Player';
 
-// Room members, deduped by player id (a player may have several sockets).
-function membersOf(inst, roomId) {
+function allPlayers() {
+  const out = [];
+  for (const inst of instances.values()) {
+    for (const p of inst.sockets.values()) if (p && p.id) out.push(p);
+  }
+  return out;
+}
+const nameOf = (id) => allPlayers().find((p) => p.id === id)?.name ?? 'Player';
+
+// Room members across every instance, deduped by player id.
+function membersOf(roomId) {
   const seen = new Map();
-  for (const p of players(inst)) {
+  for (const p of allPlayers()) {
     if (p.roomId === roomId && !seen.has(p.id)) seen.set(p.id, { id: p.id, name: p.name });
   }
   return [...seen.values()];
 }
 
-function deleteRoomIfEmpty(inst, roomId) {
-  if (roomId && inst.rooms.has(roomId) && membersOf(inst, roomId).length === 0) {
-    inst.rooms.delete(roomId);
+function deleteRoomIfEmpty(roomId) {
+  if (roomId && ROOMS.has(roomId) && membersOf(roomId).length === 0) {
+    ROOMS.delete(roomId);
   }
 }
 
-function leaveRoom(inst, p) {
+function leaveRoom(p) {
   if (!p?.roomId) return;
-  const room = inst.rooms.get(p.roomId);
+  const room = ROOMS.get(p.roomId);
   if (room) handleLeave(room.bomb, indexFor(room.bomb), p.id);
   const oldId = p.roomId;
   p.roomId = null;
-  deleteRoomIfEmpty(inst, oldId);
+  deleteRoomIfEmpty(oldId);
 }
 
-function bombView(inst, room) {
+function bombView(room) {
   const b = room.bomb;
-  const seatIds = b.phase === 'idle' ? membersOf(inst, room.id).map((m) => m.id) : b.order;
+  const seatIds = b.phase === 'idle' ? membersOf(room.id).map((m) => m.id) : b.order;
   const seats = seatIds.map((id) => ({
     id,
-    name: nameOf(inst, id),
+    name: nameOf(id),
     lives: b.lives[id] ?? b.startLives,
     alive: b.alive[id] ?? true,
   }));
@@ -181,11 +194,11 @@ function bombView(inst, room) {
   };
 }
 
-const roomsList = (inst) =>
-  [...inst.rooms.values()].map((r) => ({
+const roomsList = () =>
+  [...ROOMS.values()].map((r) => ({
     id: r.id,
     name: r.name,
-    players: membersOf(inst, r.id).length,
+    players: membersOf(r.id).length,
     phase: r.bomb.phase,
     lang: r.bomb.lang,
   }));
@@ -199,20 +212,20 @@ function broadcast(id) {
     serverTime: Date.now(),
     players: players(inst).map((p) => ({ id: p.id, name: p.name })),
     pomo: inst.pomo,
-    rooms: roomsList(inst),
+    rooms: roomsList(),
   };
   for (const [ws, p] of inst.sockets) {
     if (ws.readyState !== ws.OPEN) continue;
     let room = null;
     if (p?.roomId) {
-      const r = inst.rooms.get(p.roomId);
+      const r = ROOMS.get(p.roomId);
       if (r) {
         room = {
           id: r.id,
           name: r.name,
           hostId: r.hostId,
-          members: membersOf(inst, r.id),
-          bomb: bombView(inst, r),
+          members: membersOf(r.id),
+          bomb: bombView(r),
           chat: r.chat,
         };
       }
@@ -307,35 +320,35 @@ function applyCommand(inst, ws, cmd) {
     case 'room': {
       if (!me) break;
       if (cmd.action === 'create') {
-        if (inst.rooms.size >= ROOMS_MAX) break;
-        leaveRoom(inst, me);
+        if (ROOMS.size >= ROOMS_MAX) break;
+        leaveRoom(me);
         const id = Math.random().toString(36).slice(2, 8);
         const name = String(cmd.name ?? '').trim().slice(0, 24) || `${me.name}'s room`;
-        inst.rooms.set(id, { id, name, hostId: me.id, bomb: freshBomb(), chat: [] });
+        ROOMS.set(id, { id, name, hostId: me.id, bomb: freshBomb(), chat: [] });
         me.roomId = id;
       } else if (cmd.action === 'join') {
-        const room = inst.rooms.get(String(cmd.id ?? ''));
-        if (room && membersOf(inst, room.id).length < ROOM_MAX_PLAYERS) {
-          leaveRoom(inst, me);
+        const room = ROOMS.get(String(cmd.id ?? ''));
+        if (room && membersOf(room.id).length < ROOM_MAX_PLAYERS) {
+          leaveRoom(me);
           me.roomId = room.id;
         }
       } else if (cmd.action === 'leave') {
-        leaveRoom(inst, me);
+        leaveRoom(me);
       }
       break;
     }
     case 'bomb': {
       if (!me?.roomId) break;
-      const room = inst.rooms.get(me.roomId);
+      const room = ROOMS.get(me.roomId);
       if (!room) break;
       const b = room.bomb;
       if (cmd.action === 'start') {
         const lang = ['en', 'fr', 'ar'].includes(cmd.lang) ? cmd.lang : 'en';
-        const ids = membersOf(inst, room.id).map((m) => m.id);
+        const ids = membersOf(room.id).map((m) => m.id);
         startBomb(b, ids, INDEXES[lang], { ...cmd, lang });
         console.log(
           `[game ${room.id}] start by ${me.name} · ${lang}/${b.difficulty} · players: ${ids
-            .map((i) => nameOf(inst, i))
+            .map((i) => nameOf(i))
             .join(', ')} · solo=${b.solo}`,
         );
       } else if (cmd.action === 'submit') {
@@ -343,8 +356,8 @@ function applyCommand(inst, ws, cmd) {
         console.log(
           `[game ${room.id}] ${me.name} submit "${cmd.word}" → ${
             ok ? 'accepted' : `refused (${b.message})`
-          } · lives: ${b.order.map((i) => `${nameOf(inst, i)}=${b.lives[i]}`).join(' ')} · next: ${
-            b.phase === 'playing' ? nameOf(inst, b.order[b.turnIdx]) : b.phase
+          } · lives: ${b.order.map((i) => `${nameOf(i)}=${b.lives[i]}`).join(' ')} · next: ${
+            b.phase === 'playing' ? nameOf(b.order[b.turnIdx]) : b.phase
           }`,
         );
       } else if (cmd.action === 'typing') {
@@ -359,7 +372,7 @@ function applyCommand(inst, ws, cmd) {
     }
     case 'chat': {
       if (!me?.roomId) break;
-      const room = inst.rooms.get(me.roomId);
+      const room = ROOMS.get(me.roomId);
       const text = String(cmd.text ?? '').trim().slice(0, 200);
       if (room && text) {
         room.chat.push({ id: me.id, name: me.name, text, t: Date.now() });
@@ -372,17 +385,23 @@ function applyCommand(inst, ws, cmd) {
   }
 }
 
+// Rooms span instances, so any change fans out to every connected client.
+function broadcastAll() {
+  for (const id of instances.keys()) broadcast(id);
+}
+
 // One global tick drives Pomodoro phase changes + every room's bomb timer.
 setInterval(() => {
+  let roomsChanged = false;
+  for (const room of ROOMS.values()) {
+    if (timeoutTick(room.bomb, indexFor(room.bomb), (pid) => nameOf(pid))) roomsChanged = true;
+  }
   for (const [id, inst] of instances) {
-    let changed = false;
+    let changed = roomsChanged;
     const s = inst.pomo;
     if (s.running && s.endsAt && Date.now() >= s.endsAt) {
       pomoAdvance(s);
       changed = true;
-    }
-    for (const room of inst.rooms.values()) {
-      if (timeoutTick(room.bomb, indexFor(room.bomb), (pid) => nameOf(inst, pid))) changed = true;
     }
     if (changed) broadcast(id);
   }
@@ -409,24 +428,24 @@ wss.on('connection', (ws, req) => {
       return;
     }
     applyCommand(inst, ws, cmd);
-    broadcast(instanceId);
+    // Rooms are global: room-mates may live in other instances.
+    broadcastAll();
   });
 
   ws.on('close', () => {
     const me = inst.sockets.get(ws);
     inst.sockets.delete(ws);
     if (me?.roomId) {
-      const room = inst.rooms.get(me.roomId);
+      const room = ROOMS.get(me.roomId);
       if (room) handleLeave(room.bomb, indexFor(room.bomb), me.id);
-      deleteRoomIfEmpty(inst, me.roomId);
+      deleteRoomIfEmpty(me.roomId);
     }
     if (inst.sockets.size === 0) {
       setTimeout(() => {
         if (inst.sockets.size === 0) instances.delete(instanceId);
       }, 5 * 60 * 1000);
-    } else {
-      broadcast(instanceId);
     }
+    broadcastAll();
   });
 });
 
