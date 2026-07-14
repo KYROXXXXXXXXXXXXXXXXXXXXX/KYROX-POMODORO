@@ -331,14 +331,21 @@ export function KyroxAvatar({
         />
         <circle cx="178" cy="118" r="8" fill="#2c2135" />
       </g>
-      <ellipse cx="100" cy="172" rx="50" ry="36" fill="url(#kFur)" />
-      {/* chest fluff */}
-      <path d="M100,146 C88,158 88,176 100,186 C112,176 112,158 100,146 Z" fill="#241b2e" />
-      {/* front paws with toe beans */}
-      <ellipse cx="82" cy="201" rx="14" ry="8" fill="#2a2033" />
-      <ellipse cx="118" cy="201" rx="14" ry="8" fill="#2a2033" />
-      <path d="M76,201 L76,206 M82,202 L82,207 M88,201 L88,206" stroke="#171019" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M112,201 L112,206 M118,202 L118,207 M124,201 L124,206" stroke="#171019" strokeWidth="1.6" strokeLinecap="round" />
+      {/* haunches / back */}
+      <ellipse cx="112" cy="168" rx="46" ry="34" fill="url(#kFur)" />
+      <path d="M148,150 Q157,166 152,186" stroke="rgba(190,200,255,0.1)" strokeWidth="5" fill="none" strokeLinecap="round" />
+      {/* rear paw peeking out */}
+      <ellipse cx="146" cy="199" rx="14" ry="7" fill="#2a2033" />
+      <path d="M141,199 L141,204 M147,200 L147,205 M153,199 L153,204" stroke="#171019" strokeWidth="1.5" strokeLinecap="round" />
+      {/* chest */}
+      <path d="M74,138 C64,160 66,186 78,199 L114,199 C122,182 122,158 114,140 Z" fill="url(#kFur)" />
+      <path d="M96,146 C86,158 86,176 96,188 C106,176 106,158 96,146 Z" fill="#241b2e" />
+      {/* left front leg — steps when he walks, dangles when carried */}
+      <g className="k-leg-l">
+        <path d="M78,150 L78,188 Q78,199 87,199 L89,199 Q97,199 97,188 L97,150 Z" fill="url(#kFur)" />
+        <ellipse cx="88" cy="199" rx="12" ry="7" fill="#2a2033" />
+        <path d="M83,199 L83,204 M88,200 L88,205 M93,199 L93,204" stroke="#171019" strokeWidth="1.5" strokeLinecap="round" />
+      </g>
       <g className="k-ear-l">
         <path d="M52,62 L44,14 L90,38 Z" fill="url(#kFur)" />
         <path d="M56,54 L51,26 L79,40 Z" fill="url(#kEar)" />
@@ -348,6 +355,8 @@ export function KyroxAvatar({
         <path d="M144,54 L149,26 L121,40 Z" fill="url(#kEar)" />
       </g>
       <ellipse cx="100" cy="94" rx="54" ry="50" fill="url(#kFur)" />
+      {/* rim light */}
+      <path d="M52,82 Q58,54 82,45" stroke="rgba(190,200,255,0.14)" strokeWidth="6" fill="none" strokeLinecap="round" />
       {/* cheek fluff */}
       <path d="M46,100 L36,96 L46,108 L38,108 L48,116 Z" fill="#1d1526" />
       <path d="M154,100 L164,96 L154,108 L162,108 L152,116 Z" fill="#1d1526" />
@@ -384,15 +393,11 @@ export function KyroxAvatar({
           <path d="M88,32 L93,29 L91,35 Z" fill="#ffe9a8" />
         </g>
       )}
+      {/* right front leg = his working paw (waves, swipes, grooms, steps) */}
       <g className={`k-arm ${emotion === 'excited' ? 'wave' : ''}`}>
-        <path
-          d="M138,168 C152,164 158,150 158,138"
-          stroke="#1d1526"
-          strokeWidth="13"
-          strokeLinecap="round"
-          fill="none"
-        />
-        <ellipse cx="158" cy="134" rx="8" ry="7" fill="#2a2033" />
+        <path d="M108,150 L108,188 Q108,199 117,199 L119,199 Q127,199 127,188 L127,150 Z" fill="url(#kFur)" />
+        <ellipse cx="118" cy="199" rx="12" ry="7" fill="#2a2033" />
+        <path d="M113,199 L113,204 M118,200 L118,205 M123,199 L123,204" stroke="#171019" strokeWidth="1.5" strokeLinecap="round" />
       </g>
     </svg>
   );

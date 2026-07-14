@@ -1625,8 +1625,11 @@ input:focus,
     transform: scaleY(0.08);
   }
 }
+/* Articulated front legs: shoulder-pivot rotation */
+.k-leg-l,
 .k-arm {
-  transform-origin: 140px 160px;
+  transform-box: fill-box;
+  transform-origin: 50% 6%;
 }
 .k-arm.wave {
   animation: k-wave 0.9s ease-in-out infinite;
@@ -1637,8 +1640,49 @@ input:focus,
     transform: rotate(0deg);
   }
   50% {
-    transform: rotate(16deg);
+    transform: rotate(-58deg);
   }
+}
+/* Walk cycle: paws step alternately while he runs */
+.kyrox.run .k-leg-l {
+  animation: step-cycle 0.34s linear infinite;
+}
+.kyrox.run .k-arm {
+  animation: step-cycle 0.34s linear infinite;
+  animation-delay: -0.17s;
+}
+@keyframes step-cycle {
+  0%,
+  100% {
+    transform: rotate(14deg);
+  }
+  50% {
+    transform: rotate(-14deg);
+  }
+}
+/* Carried: legs hang and sway */
+.kyrox.held .k-leg-l {
+  animation: leg-dangle 0.8s ease-in-out infinite;
+}
+.kyrox.held .k-arm {
+  animation: leg-dangle 0.8s ease-in-out infinite;
+  animation-delay: -0.4s;
+}
+@keyframes leg-dangle {
+  0%,
+  100% {
+    transform: rotate(7deg);
+  }
+  50% {
+    transform: rotate(-7deg);
+  }
+}
+/* Thrown: legs splayed in panic */
+.kyrox.flying .k-leg-l {
+  transform: rotate(24deg);
+}
+.kyrox.flying .k-arm {
+  transform: rotate(-24deg);
 }
 @keyframes kyrox-idle {
   0%,
@@ -2124,11 +2168,11 @@ input:focus,
   25%,
   55%,
   85% {
-    transform: rotate(-55deg);
+    transform: rotate(52deg);
   }
   40%,
   70% {
-    transform: rotate(-38deg);
+    transform: rotate(36deg);
   }
 }
 
