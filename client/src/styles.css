@@ -1757,8 +1757,15 @@ input:focus,
   z-index: 40;
   pointer-events: none;
 }
-.companion .kyrox,
+.companion .kyrox {
+  pointer-events: auto;
+}
+/* His chatter never blocks clicks on the UI behind it… */
 .companion .bubble {
+  pointer-events: none;
+}
+/* …except during the tour, whose bubble holds the Next/Skip buttons. */
+.companion .bubble.has-actions {
   pointer-events: auto;
 }
 .k-stage.mini {

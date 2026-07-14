@@ -761,6 +761,9 @@ export function KyroxCompanion({ view, pomo }: { view: View; pomo: PomoInfo }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pomo.running, pomo.mode]);
 
+  const viewRef = useRef(view);
+  viewRef.current = view;
+
   // React to screen changes; abort the tour if the user navigates away.
   const prevView = useRef(view);
   useEffect(() => {
@@ -786,8 +789,17 @@ export function KyroxCompanion({ view, pomo }: { view: View; pomo: PomoInfo }) {
         if (st.mode === 'roam' && !st.sleeping && !st.running && !ballRef.current && !st.held && !st.falling) {
           const margin = 18;
           const max = Math.max(margin, window.innerWidth - 150);
-          let target = margin + Math.random() * (max - margin);
-          if (Math.abs(target - st.x) < 130) target = st.x > max / 2 ? margin : max;
+          let target: number;
+          if (viewRef.current === 'menu') {
+            target = margin + Math.random() * (max - margin);
+            if (Math.abs(target - st.x) < 130) target = st.x > max / 2 ? margin : max;
+          } else {
+            // Outside the menu, stick to the sides so his chatter never
+            // covers the centered controls (timer, game arena…).
+            const span = Math.max(40, (max - margin) * 0.22);
+            target =
+              Math.random() < 0.5 ? margin + Math.random() * span : max - Math.random() * span;
+          }
           const dur = Math.min(3, Math.max(0.8, Math.abs(target - st.x) / 240));
           moveTo({ x: target, y: roamPos().y }, dur);
         }
@@ -994,7 +1006,7 @@ export function KyroxCompanion({ view, pomo }: { view: View; pomo: PomoInfo }) {
         }}
       >
         {displayLine && (
-          <div className="bubble">
+          <div className={`bubble${step ? ' has-actions' : ''}`}>
             {richText(typed)}
             {typed.length < displayLine.length && <span className="caret">▌</span>}
             {step && (
