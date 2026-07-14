@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { PomoMode, Sync } from './useGameSync';
 
 // Immersive lofi-style Pomodoro: a real photo backdrop (theme-tinted), a
@@ -25,59 +25,6 @@ function fmt(total: number) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-// Generative rain: looping brown-ish noise through a lowpass filter.
-function useRain() {
-  const nodes = useRef<{ ctx: AudioContext; gain: GainNode } | null>(null);
-  const [on, setOn] = useState(false);
-  const [vol, setVol] = useState(0.5);
-
-  const toggle = () => {
-    if (nodes.current) {
-      nodes.current.ctx.close();
-      nodes.current = null;
-      setOn(false);
-      return;
-    }
-    const ctx = new AudioContext();
-    const len = 2 * ctx.sampleRate;
-    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
-    const d = buf.getChannelData(0);
-    let last = 0;
-    for (let i = 0; i < len; i++) {
-      const w = Math.random() * 2 - 1;
-      last = (last + 0.02 * w) / 1.02;
-      d[i] = last * 3.2 + w * 0.14;
-    }
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    src.loop = true;
-    const filt = ctx.createBiquadFilter();
-    filt.type = 'lowpass';
-    filt.frequency.value = 1100;
-    const gain = ctx.createGain();
-    gain.gain.value = vol * 0.55;
-    src.connect(filt);
-    filt.connect(gain);
-    gain.connect(ctx.destination);
-    src.start();
-    nodes.current = { ctx, gain };
-    setOn(true);
-  };
-
-  useEffect(() => {
-    if (nodes.current) nodes.current.gain.gain.value = vol * 0.55;
-  }, [vol]);
-  useEffect(
-    () => () => {
-      nodes.current?.ctx.close();
-    },
-    [],
-  );
-
-  return { on, vol, setVol, toggle };
-}
-
-
 // Real photo backdrop (client/public/scene.jpg — Märt Kose, CC BY-SA,
 // via Wikimedia Commons), tinted to follow the active theme.
 function Scene() {
@@ -98,7 +45,6 @@ export function Pomodoro({ sync }: { sync: Sync }) {
   const [short, setShort] = useState(Math.round(p.durations.short / 60));
   const [long, setLong] = useState(Math.round(p.durations.long / 60));
   const [longEvery, setLongEvery] = useState(p.longEvery);
-  const rain = useRain();
 
   const full = p.durations[p.mode];
   const startLabel = p.secondsLeft < full ? 'Resume' : 'Start';
@@ -231,28 +177,6 @@ export function Pomodoro({ sync }: { sync: Sync }) {
         </div>
       </div>
 
-      {/* ambience bar */}
-      <div className="amb-bar">
-        <span className="amb-tag">Lofi</span>
-        <div className="amb-info">
-          <span className="amb-title">Rainy Cabin</span>
-          <span className="amb-artist muted">Generative ambience</span>
-        </div>
-        <button className="amb-play" onClick={rain.toggle} aria-label="Toggle rain sound">
-          {rain.on ? '⏸' : '▶'}
-        </button>
-        <input
-          className="amb-vol"
-          type="range"
-          min={0}
-          max={1}
-          step={0.01}
-          value={rain.vol}
-          onChange={(e) => rain.setVol(+e.target.value)}
-          aria-label="Volume"
-        />
-        <span className="amb-icon">{rain.on ? '🌧' : '🔇'}</span>
-      </div>
     </div>
   );
 }
