@@ -342,7 +342,7 @@ export function KyroxAvatar({
       <path d="M96,146 C86,158 86,176 96,188 C106,176 106,158 96,146 Z" fill="#241b2e" />
       {/* left front leg — steps when he walks, dangles when carried */}
       <g className="k-leg-l">
-        <path d="M78,150 L78,188 Q78,199 87,199 L89,199 Q97,199 97,188 L97,150 Z" fill="url(#kFur)" />
+        <path d="M78,142 L78,188 Q78,199 87,199 L89,199 Q97,199 97,188 L97,142 Z" fill="url(#kFur)" />
         <ellipse cx="88" cy="199" rx="12" ry="7" fill="#2a2033" />
         <path d="M83,199 L83,204 M88,200 L88,205 M93,199 L93,204" stroke="#171019" strokeWidth="1.5" strokeLinecap="round" />
       </g>
@@ -395,7 +395,7 @@ export function KyroxAvatar({
       )}
       {/* right front leg = his working paw (waves, swipes, grooms, steps) */}
       <g className={`k-arm ${emotion === 'excited' ? 'wave' : ''}`}>
-        <path d="M108,150 L108,188 Q108,199 117,199 L119,199 Q127,199 127,188 L127,150 Z" fill="url(#kFur)" />
+        <path d="M108,142 L108,188 Q108,199 117,199 L119,199 Q127,199 127,188 L127,142 Z" fill="url(#kFur)" />
         <ellipse cx="118" cy="199" rx="12" ry="7" fill="#2a2033" />
         <path d="M113,199 L113,204 M118,200 L118,205 M123,199 L123,204" stroke="#171019" strokeWidth="1.5" strokeLinecap="round" />
       </g>

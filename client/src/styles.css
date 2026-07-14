@@ -1625,11 +1625,12 @@ input:focus,
     transform: scaleY(0.08);
   }
 }
-/* Articulated front legs: shoulder-pivot rotation */
+/* Articulated front legs — front view, so paws pump vertically, no pendulum */
 .k-leg-l,
 .k-arm {
   transform-box: fill-box;
-  transform-origin: 50% 6%;
+  transform-origin: 50% 4%;
+  transition: transform 0.25s ease;
 }
 .k-arm.wave {
   animation: k-wave 0.9s ease-in-out infinite;
@@ -1637,52 +1638,56 @@ input:focus,
 @keyframes k-wave {
   0%,
   100% {
-    transform: rotate(0deg);
+    transform: translateY(0) rotate(0deg);
   }
-  50% {
-    transform: rotate(-58deg);
+  40%,
+  70% {
+    transform: translateY(-9px) rotate(-26deg);
+  }
+  55% {
+    transform: translateY(-9px) rotate(-34deg);
   }
 }
-/* Walk cycle: paws step alternately while he runs */
+/* Scamper: paws pump up and down alternately */
 .kyrox.run .k-leg-l {
-  animation: step-cycle 0.34s linear infinite;
+  animation: paw-pump 0.3s linear infinite;
 }
 .kyrox.run .k-arm {
-  animation: step-cycle 0.34s linear infinite;
-  animation-delay: -0.17s;
+  animation: paw-pump 0.3s linear infinite;
+  animation-delay: -0.15s;
 }
-@keyframes step-cycle {
+@keyframes paw-pump {
   0%,
   100% {
-    transform: rotate(14deg);
+    transform: translateY(0) rotate(3deg);
   }
   50% {
-    transform: rotate(-14deg);
+    transform: translateY(-7px) rotate(-3deg);
   }
 }
-/* Carried: legs hang and sway */
+/* Carried: legs stretch down and sway gently, out of phase */
 .kyrox.held .k-leg-l {
-  animation: leg-dangle 0.8s ease-in-out infinite;
+  animation: leg-hang 1.2s ease-in-out infinite;
 }
 .kyrox.held .k-arm {
-  animation: leg-dangle 0.8s ease-in-out infinite;
-  animation-delay: -0.4s;
+  animation: leg-hang 1.2s ease-in-out infinite;
+  animation-delay: -0.6s;
 }
-@keyframes leg-dangle {
+@keyframes leg-hang {
   0%,
   100% {
-    transform: rotate(7deg);
+    transform: translateY(5px) rotate(2.5deg);
   }
   50% {
-    transform: rotate(-7deg);
+    transform: translateY(5px) rotate(-2.5deg);
   }
 }
-/* Thrown: legs splayed in panic */
+/* Thrown: legs stretched out, slightly splayed */
 .kyrox.flying .k-leg-l {
-  transform: rotate(24deg);
+  transform: translateY(6px) rotate(8deg);
 }
 .kyrox.flying .k-arm {
-  transform: rotate(-24deg);
+  transform: translateY(6px) rotate(-8deg);
 }
 @keyframes kyrox-idle {
   0%,
@@ -1838,11 +1843,11 @@ input:focus,
   animation: paw-swipe 0.45s ease;
 }
 @keyframes paw-swipe {
-  40% {
-    transform: rotate(-42deg);
+  35% {
+    transform: translateY(-12px) rotate(-18deg);
   }
-  70% {
-    transform: rotate(24deg);
+  60% {
+    transform: translateY(-2px) rotate(12deg);
   }
 }
 
@@ -2163,16 +2168,16 @@ input:focus,
 @keyframes groom-paw {
   0%,
   100% {
-    transform: rotate(0deg);
+    transform: translate(0, 0) rotate(0deg);
   }
   25%,
   55%,
   85% {
-    transform: rotate(52deg);
+    transform: translate(-5px, -13px) rotate(24deg);
   }
   40%,
   70% {
-    transform: rotate(36deg);
+    transform: translate(-3px, -9px) rotate(16deg);
   }
 }
 
