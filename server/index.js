@@ -262,6 +262,15 @@ function pomoCommand(inst, cmd) {
     case 'skip':
       pomoAdvance(s);
       break;
+    case 'mode':
+      // Tab click: jump straight to a phase, paused at its full duration.
+      if (['focus', 'short', 'long'].includes(cmd.mode)) {
+        s.mode = cmd.mode;
+        s.running = false;
+        s.endsAt = null;
+        s.remaining = s.durations[cmd.mode];
+      }
+      break;
     case 'config': {
       if (cmd.durations) {
         for (const k of ['focus', 'short', 'long']) {

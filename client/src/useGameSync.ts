@@ -92,6 +92,7 @@ export interface Sync {
     pause: () => void;
     reset: () => void;
     skip: () => void;
+    setMode: (mode: PomoMode) => void;
     config: (d: { focus: number; short: number; long: number }, longEvery: number) => void;
   };
   room: {
@@ -221,6 +222,7 @@ export function useGameSync(instanceId: string | null, me: Me | null): Sync {
       pause: () => send({ type: 'pomo', action: 'pause' }),
       reset: () => send({ type: 'pomo', action: 'reset' }),
       skip: () => send({ type: 'pomo', action: 'skip' }),
+      setMode: (mode) => send({ type: 'pomo', action: 'mode', mode }),
       config: (durations, longEvery) => send({ type: 'pomo', action: 'config', durations, longEvery }),
     },
     room: {
