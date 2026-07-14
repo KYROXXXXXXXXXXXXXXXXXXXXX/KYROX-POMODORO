@@ -684,6 +684,42 @@ input:focus,
   height: 100%;
   display: block;
 }
+.pomo-scene img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* colour wash so the photo follows the active theme */
+.sc-tint {
+  position: absolute;
+  inset: 0;
+  background: rgba(16, 22, 48, 0.45);
+  pointer-events: none;
+}
+[data-theme='crimson'] .sc-tint {
+  background: rgba(50, 8, 22, 0.35);
+}
+[data-theme='sakura'] .sc-tint {
+  background: rgba(84, 28, 66, 0.35);
+}
+/* one-click duration presets */
+.settings-grid .opt-row {
+  width: 100%;
+}
+.preset-row .opt-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 12px;
+}
+.preset-detail {
+  font-size: 11.5px;
+  font-weight: 600;
+  opacity: 0.75;
+}
 .sc-vignette {
   position: absolute;
   inset: 0;

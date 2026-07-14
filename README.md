@@ -86,3 +86,7 @@ server/   Express (échange OAuth) + ws (état + sync temps réel)
   alors **deux** mappings : `/` → client, `/api` → serveur.
 - Le secret OAuth ne quitte jamais le serveur.
 ```
+
+## Credits
+
+- Pomodoro backdrop: "Roosa hommikuudu Tolkuse rabas" by Märt Kose, CC BY-SA 3.0 EE, via Wikimedia Commons.
