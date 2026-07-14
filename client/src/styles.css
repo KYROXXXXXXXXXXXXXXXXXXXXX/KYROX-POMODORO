@@ -1834,6 +1834,60 @@ input:focus,
     transform: rotate(1.8deg);
   }
 }
+/* Pick up, carry & throw */
+.companion .kyrox {
+  cursor: grab;
+  touch-action: none;
+}
+.companion.no-trans {
+  transition: none !important;
+}
+.kyrox.held {
+  cursor: grabbing;
+  animation: none;
+}
+.kyrox.held .k-svg {
+  animation: dangle 0.7s ease-in-out infinite;
+  transform-origin: 50% 18%;
+}
+@keyframes dangle {
+  0%,
+  100% {
+    transform: rotate(-7deg);
+  }
+  50% {
+    transform: rotate(7deg);
+  }
+}
+.kyrox.flying {
+  animation: none;
+}
+.kyrox.flying .k-svg {
+  animation: flail 0.45s linear infinite;
+}
+@keyframes flail {
+  0%,
+  100% {
+    transform: rotate(-12deg);
+  }
+  50% {
+    transform: rotate(12deg);
+  }
+}
+.kyrox.land {
+  animation: land-squash 0.45s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+@keyframes land-squash {
+  0% {
+    transform: scale(1.2, 0.72) translateY(6px);
+  }
+  55% {
+    transform: scale(0.94, 1.08);
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+}
 /* Sleeping: floating z z z */
 .zzz {
   position: absolute;

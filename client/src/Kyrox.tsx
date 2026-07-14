@@ -71,6 +71,10 @@ const REACTIONS: { text: string; emotion: Emotion }[] = [
   { text: 'Careful with the fur!', emotion: 'focused' },
 ];
 
+const GRAB_LINES = ['Hey!! Put me down! 🙀', 'Meooow! I have paws, you know!', 'Whoa whoa whoa—', 'Kidnapping! This is kidnapping!'];
+const DROP_SOFT = ['Hmph. 😾', 'A little warning next time?', '*licks paw with dignity*'];
+const DROP_HARD = ['WHEEE! Do it again! 😆', 'My dignity… 😵', 'I meant to land like that.', '9 lives, minus one.'];
+
 const IDLE_TIPS: { text: string; emotion: Emotion }[] = [
   { text: 'Tip: start a Pomodoro and the whole room follows the same timer.', emotion: 'thinking' },
   { text: 'Stuck on a syllable? Think plurals and long words.', emotion: 'thinking' },
@@ -134,10 +138,10 @@ function Face({ emotion, gaze }: { emotion: Emotion; gaze: Gaze }) {
     const py = dy + gaze.dy;
     return (
       <g className="k-blink">
-        <ellipse cx="74" cy="104" rx="10.5" ry="12.5" fill="#eab54e" />
+        <ellipse cx="74" cy="104" rx="10.5" ry="12.5" fill="url(#kEye)" />
         <ellipse cx={74 + px} cy={104 + py} rx="3.2" ry="9.5" fill="#17121a" />
         <circle cx="77.5" cy="99" r="3" fill="#fff" />
-        <ellipse cx="126" cy="104" rx="10.5" ry="12.5" fill="#eab54e" />
+        <ellipse cx="126" cy="104" rx="10.5" ry="12.5" fill="url(#kEye)" />
         <ellipse cx={126 + px} cy={104 + py} rx="3.2" ry="9.5" fill="#17121a" />
         <circle cx="129.5" cy="99" r="3" fill="#fff" />
       </g>
@@ -188,10 +192,10 @@ function Face({ emotion, gaze }: { emotion: Emotion; gaze: Gaze }) {
     case 'surprised':
       return (
         <g>
-          <circle cx="74" cy="104" r="11.5" fill="#eab54e" />
+          <circle cx="74" cy="104" r="11.5" fill="url(#kEye)" />
           <circle cx={74 + gaze.dx} cy={104 + gaze.dy} r="2.6" fill="#17121a" />
           <circle cx="78" cy="99" r="2.6" fill="#fff" />
-          <circle cx="126" cy="104" r="11.5" fill="#eab54e" />
+          <circle cx="126" cy="104" r="11.5" fill="url(#kEye)" />
           <circle cx={126 + gaze.dx} cy={104 + gaze.dy} r="2.6" fill="#17121a" />
           <circle cx="130" cy="99" r="2.6" fill="#fff" />
           <ellipse cx="100" cy="133" rx="4.5" ry="6" fill="#7e3a4a" />
@@ -229,50 +233,76 @@ function Face({ emotion, gaze }: { emotion: Emotion; gaze: Gaze }) {
 export function KyroxAvatar({ emotion, gaze = NO_GAZE }: { emotion: Emotion; gaze?: Gaze }) {
   return (
     <svg viewBox="0 0 200 210" className="k-svg" aria-hidden>
+      <defs>
+        <radialGradient id="kFur" cx="42%" cy="32%" r="80%">
+          <stop offset="0" stopColor="#2c2135" />
+          <stop offset="1" stopColor="#150f1b" />
+        </radialGradient>
+        <radialGradient id="kEar" cx="50%" cy="40%" r="70%">
+          <stop offset="0" stopColor="#a3556b" />
+          <stop offset="1" stopColor="#6e3040" />
+        </radialGradient>
+        <radialGradient id="kEye" cx="40%" cy="32%" r="75%">
+          <stop offset="0" stopColor="#ffd27a" />
+          <stop offset="1" stopColor="#d3922b" />
+        </radialGradient>
+      </defs>
       <g className="k-tail">
         <path
           d="M150,180 C185,175 192,140 178,118"
-          stroke="#1a1420"
+          stroke="#1d1526"
           strokeWidth="14"
           fill="none"
           strokeLinecap="round"
         />
+        <circle cx="178" cy="118" r="8" fill="#2c2135" />
       </g>
-      <ellipse cx="100" cy="172" rx="50" ry="36" fill="#1a1420" />
-      <ellipse cx="82" cy="201" rx="14" ry="8" fill="#241c2b" />
-      <ellipse cx="118" cy="201" rx="14" ry="8" fill="#241c2b" />
+      <ellipse cx="100" cy="172" rx="50" ry="36" fill="url(#kFur)" />
+      {/* chest fluff */}
+      <path d="M100,146 C88,158 88,176 100,186 C112,176 112,158 100,146 Z" fill="#241b2e" />
+      {/* front paws with toe beans */}
+      <ellipse cx="82" cy="201" rx="14" ry="8" fill="#2a2033" />
+      <ellipse cx="118" cy="201" rx="14" ry="8" fill="#2a2033" />
+      <path d="M76,201 L76,206 M82,202 L82,207 M88,201 L88,206" stroke="#171019" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M112,201 L112,206 M118,202 L118,207 M124,201 L124,206" stroke="#171019" strokeWidth="1.6" strokeLinecap="round" />
       <g className="k-ear-l">
-        <path d="M52,62 L44,14 L90,38 Z" fill="#1a1420" />
-        <path d="M56,54 L51,26 L79,40 Z" fill="#7e3a4a" />
+        <path d="M52,62 L44,14 L90,38 Z" fill="url(#kFur)" />
+        <path d="M56,54 L51,26 L79,40 Z" fill="url(#kEar)" />
       </g>
       <g className="k-ear-r">
-        <path d="M148,62 L156,14 L110,38 Z" fill="#1a1420" />
-        <path d="M144,54 L149,26 L121,40 Z" fill="#7e3a4a" />
+        <path d="M148,62 L156,14 L110,38 Z" fill="url(#kFur)" />
+        <path d="M144,54 L149,26 L121,40 Z" fill="url(#kEar)" />
       </g>
-      <ellipse cx="100" cy="94" rx="54" ry="50" fill="#1a1420" />
+      <ellipse cx="100" cy="94" rx="54" ry="50" fill="url(#kFur)" />
+      {/* cheek fluff */}
+      <path d="M46,100 L36,96 L46,108 L38,108 L48,116 Z" fill="#1d1526" />
+      <path d="M154,100 L164,96 L154,108 L162,108 L152,116 Z" fill="#1d1526" />
+      {/* forehead tuft */}
+      <path d="M92,46 Q100,38 108,46 Q104,40 100,52 Q96,40 92,46 Z" fill="#241b2e" />
       <Face emotion={emotion} gaze={gaze} />
-      <path d="M95,124 L105,124 L100,131 Z" fill="#d98a96" />
-      <g stroke="rgba(216,216,222,0.5)" strokeWidth="1.5" strokeLinecap="round">
-        <line x1="60" y1="122" x2="28" y2="116" />
-        <line x1="62" y1="130" x2="30" y2="132" />
-        <line x1="140" y1="122" x2="172" y2="116" />
-        <line x1="138" y1="130" x2="170" y2="132" />
+      <path d="M95,124 L105,124 L100,131 Z" fill="#e09aa6" />
+      <g stroke="rgba(220,222,235,0.5)" strokeWidth="1.5" strokeLinecap="round" fill="none">
+        <path d="M60,122 Q44,120 28,114" />
+        <path d="M62,130 Q46,132 30,134" />
+        <path d="M140,122 Q156,120 172,114" />
+        <path d="M138,130 Q154,132 170,134" />
       </g>
       <path
         d="M62,138 C80,150 120,150 138,138 L136,149 C118,159 82,159 64,149 Z"
         style={{ fill: 'var(--collar)', stroke: 'var(--collar-stroke)' }}
         strokeWidth="1"
       />
-      <circle cx="100" cy="154" r="6" fill="#d8d8de" stroke="#8b8b96" strokeWidth="1.5" />
+      <circle cx="100" cy="154" r="6" fill="#e8e8ee" stroke="#8b8b96" strokeWidth="1.5" />
+      <circle cx="98" cy="152" r="2" fill="#ffffff" />
       <g className={`k-arm ${emotion === 'excited' ? 'wave' : ''}`}>
         <path
           d="M138,168 C152,164 158,150 158,138"
-          stroke="#1a1420"
+          stroke="#1d1526"
           strokeWidth="13"
           strokeLinecap="round"
           fill="none"
         />
-        <ellipse cx="158" cy="134" rx="8" ry="7" fill="#241c2b" />
+        <ellipse cx="158" cy="134" rx="8" ry="7" fill="#2a2033" />
       </g>
     </svg>
   );
@@ -320,6 +350,9 @@ export function KyroxCompanion({ view }: { view: View }) {
   const [ball, setBall] = useState<{ x: number } | null>(null);
   const [swipe, setSwipe] = useState(false);
   const [swipeDir, setSwipeDir] = useState<1 | -1>(1);
+  const [held, setHeld] = useState(false);
+  const [falling, setFalling] = useState(false);
+  const [landing, setLanding] = useState(0);
 
   const wrapRef = useRef<HTMLDivElement>(null);
   const gaze = useMouseGaze(wrapRef);
@@ -330,8 +363,17 @@ export function KyroxCompanion({ view }: { view: View }) {
   const pokeTimes = useRef<number[]>([]);
   const glowEl = useRef<HTMLElement | null>(null);
   const ballRef = useRef<Ball | null>(null);
-  const stateRef = useRef({ mode, sleeping, running: !!run, x: pos.x });
-  stateRef.current = { mode, sleeping, running: !!run, x: pos.x };
+  const physRef = useRef({ vx: 0, vy: 0, impact: 0 });
+  const dragRef = useRef<{
+    startX: number;
+    startY: number;
+    moved: boolean;
+    offX: number;
+    offY: number;
+    trail: { x: number; y: number; t: number }[];
+  } | null>(null);
+  const stateRef = useRef({ mode, sleeping, running: !!run, held, falling, x: pos.x, y: pos.y });
+  stateRef.current = { mode, sleeping, running: !!run, held, falling, x: pos.x, y: pos.y };
 
   const clearGlow = () => {
     glowEl.current?.classList.remove('tour-glow');
@@ -396,6 +438,42 @@ export function KyroxCompanion({ view }: { view: View }) {
     let raf = 0;
     let chasing = false;
     const tick = () => {
+      // Thrown / dropped: gravity, wall bounces, ground landing.
+      const st = stateRef.current;
+      if (st.falling && !st.held) {
+        const ph = physRef.current;
+        ph.vy += 1.15;
+        let x = st.x + ph.vx;
+        let y = st.y + ph.vy;
+        const ground = window.innerHeight - 110;
+        if (x < 2) {
+          x = 2;
+          ph.vx = Math.abs(ph.vx) * 0.6;
+        }
+        if (x > window.innerWidth - 96) {
+          x = window.innerWidth - 96;
+          ph.vx = -Math.abs(ph.vx) * 0.6;
+        }
+        if (y >= ground) {
+          y = ground;
+          ph.impact = Math.max(ph.impact, Math.abs(ph.vy));
+          if (Math.abs(ph.vy) > 10) {
+            ph.vy = -Math.abs(ph.vy) * 0.38;
+            ph.vx *= 0.7;
+          } else {
+            setFalling(false);
+            setLanding((n) => n + 1);
+            const hard = ph.impact > 16;
+            const pool = hard ? DROP_HARD : DROP_SOFT;
+            say(pool[(Math.random() * pool.length) | 0], hard ? 'surprised' : 'focused', 2600);
+            ph.vx = 0;
+            ph.vy = 0;
+            ph.impact = 0;
+          }
+        }
+        setPos({ x, y });
+      }
+
       const b = ballRef.current;
       if (b) {
         if (stateRef.current.mode === 'tour') {
@@ -428,7 +506,7 @@ export function KyroxCompanion({ view }: { view: View }) {
           setBall({ x: b.x });
 
           // Ball settled → run to it, then swipe it with a paw.
-          if (Math.abs(b.vx) < 0.2 && !chasing && !b.leaving) {
+          if (Math.abs(b.vx) < 0.2 && !chasing && !b.leaving && !st.held && !st.falling) {
             chasing = true;
             const st = stateRef.current;
             const side: 1 | -1 = b.x > st.x ? -1 : 1;
@@ -476,7 +554,7 @@ export function KyroxCompanion({ view }: { view: View }) {
     const schedule = (d: number) => {
       t = setTimeout(() => {
         const st = stateRef.current;
-        if (st.mode === 'roam' && !st.sleeping && !ballRef.current) spawnBall();
+        if (st.mode === 'roam' && !st.sleeping && !ballRef.current && !st.held && !st.falling) spawnBall();
         schedule(50000 + Math.random() * 40000);
       }, d);
     };
@@ -543,7 +621,7 @@ export function KyroxCompanion({ view }: { view: View }) {
     const schedule = () => {
       t = setTimeout(() => {
         const st = stateRef.current;
-        if (st.mode === 'roam' && !st.sleeping && !st.running && !ballRef.current) {
+        if (st.mode === 'roam' && !st.sleeping && !st.running && !ballRef.current && !st.held && !st.falling) {
           const margin = 18;
           const max = Math.max(margin, window.innerWidth - 150);
           let target = margin + Math.random() * (max - margin);
@@ -568,7 +646,7 @@ export function KyroxCompanion({ view }: { view: View }) {
     const schedule = (d: number) => {
       t = setTimeout(() => {
         const st = stateRef.current;
-        if (st.mode === 'roam' && !st.sleeping && !ballRef.current) {
+        if (st.mode === 'roam' && !st.sleeping && !ballRef.current && !st.held && !st.falling) {
           const tip = IDLE_TIPS[(Math.random() * IDLE_TIPS.length) | 0];
           say(tip.text, tip.emotion, 6000);
         }
@@ -584,7 +662,7 @@ export function KyroxCompanion({ view }: { view: View }) {
   useEffect(() => {
     const id = setInterval(() => {
       const st = stateRef.current;
-      if (st.mode === 'roam' && !st.sleeping && !st.running && !ballRef.current && Date.now() - lastPoke.current > 80000) {
+      if (st.mode === 'roam' && !st.sleeping && !st.running && !ballRef.current && !st.held && !st.falling && Date.now() - lastPoke.current > 80000) {
         say('*yawn*… nap time 🥱', 'sleepy', 2400);
         setTimeout(() => {
           if (Date.now() - lastPoke.current > 80000) setSleeping(true);
@@ -611,6 +689,67 @@ export function KyroxCompanion({ view }: { view: View }) {
     return () => window.removeEventListener('resize', onResize);
   }, [tourStep]);
 
+  // ---- Pick up, carry & throw ------------------------------------------------
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (mode === 'tour') {
+      poke();
+      return;
+    }
+    (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      moved: false,
+      offX: e.clientX - stateRef.current.x,
+      offY: e.clientY - stateRef.current.y,
+      trail: [{ x: e.clientX, y: e.clientY, t: performance.now() }],
+    };
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    const d = dragRef.current;
+    if (!d) return;
+    if (!d.moved) {
+      if (Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < 7) return;
+      d.moved = true;
+      setHeld(true);
+      setFalling(false);
+      setSleeping(false);
+      lastPoke.current = Date.now();
+      ballRef.current = null;
+      setBall(null);
+      say(GRAB_LINES[(Math.random() * GRAB_LINES.length) | 0], 'surprised', 2200);
+    }
+    const x = clamp(e.clientX - d.offX, -10, window.innerWidth - 80);
+    const y = clamp(e.clientY - d.offY, -10, window.innerHeight - 70);
+    setPos({ x, y });
+    d.trail.push({ x: e.clientX, y: e.clientY, t: performance.now() });
+    if (d.trail.length > 8) d.trail.shift();
+  };
+
+  const onPointerUp = () => {
+    const d = dragRef.current;
+    dragRef.current = null;
+    if (!d) return;
+    if (!d.moved) {
+      poke();
+      return;
+    }
+    setHeld(false);
+    // launch velocity from the last ~120ms of pointer movement
+    const now = performance.now();
+    const trail = d.trail;
+    const old = trail.find((p) => now - p.t < 120) ?? trail[0];
+    const last = trail[trail.length - 1];
+    const dt = Math.max(16, last.t - old.t);
+    physRef.current = {
+      vx: ((last.x - old.x) / dt) * 16,
+      vy: ((last.y - old.y) / dt) * 16,
+      impact: 0,
+    };
+    setFalling(true);
+  };
+
   const poke = () => {
     lastPoke.current = Date.now();
     setPokeN((n) => n + 1);
@@ -631,10 +770,27 @@ export function KyroxCompanion({ view }: { view: View }) {
     say(r.text, r.emotion, 2200);
   };
 
+  // Squash animation right after a landing.
+  const [justLanded, setJustLanded] = useState(false);
+  useEffect(() => {
+    if (!landing) return;
+    setJustLanded(true);
+    const t = setTimeout(() => setJustLanded(false), 500);
+    return () => clearTimeout(t);
+  }, [landing]);
+
   const step = mode === 'tour' ? TOUR[tourStep] : null;
   const displayLine = step ? step.text : sleeping ? null : line;
   const typed = useTyped(displayLine);
-  const emo: Emotion = step ? step.emotion : sleeping ? 'sleepy' : ball ? 'excited' : emotion;
+  const emo: Emotion = step
+    ? step.emotion
+    : held || falling
+      ? 'surprised'
+      : sleeping
+        ? 'sleepy'
+        : ball
+          ? 'excited'
+          : emotion;
 
   // While a ball is in play, his eyes lock onto it instead of the cursor.
   const ballGaze: Gaze | null = ball
@@ -645,13 +801,16 @@ export function KyroxCompanion({ view }: { view: View }) {
     <>
       <div
         ref={wrapRef}
-        className={`companion ${pos.x < 290 ? 'flip' : ''}`}
+        className={`companion ${pos.x < 290 ? 'flip' : ''} ${held || falling ? 'no-trans' : ''}`}
         style={{
           left: pos.x,
           top: pos.y,
-          transition: run
-            ? `left ${run.dur}s cubic-bezier(0.45, 0.05, 0.55, 0.95), top ${run.dur}s cubic-bezier(0.45, 0.05, 0.55, 0.95)`
-            : undefined,
+          transition:
+            held || falling
+              ? 'none'
+              : run
+                ? `left ${run.dur}s cubic-bezier(0.45, 0.05, 0.55, 0.95), top ${run.dur}s cubic-bezier(0.45, 0.05, 0.55, 0.95)`
+                : undefined,
         }}
       >
         {displayLine && (
@@ -685,8 +844,13 @@ export function KyroxCompanion({ view }: { view: View }) {
             key={pokeN}
             className={`kyrox ${pokeN > 0 ? 'poked' : ''} ${run ? 'run' : ''} ${
               swipe ? 'swipe' : ''
-            } ${displayLine ? 'talk' : ''}`}
-            onClick={poke}
+            } ${held ? 'held' : ''} ${falling ? 'flying' : ''} ${justLanded ? 'land' : ''} ${
+              displayLine ? 'talk' : ''
+            }`}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
             onDoubleClick={view === 'menu' && mode === 'roam' ? startTour : undefined}
             aria-label="Kyrox"
           >
