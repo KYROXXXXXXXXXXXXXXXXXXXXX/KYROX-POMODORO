@@ -148,45 +148,26 @@ export function advanceTurn(b) {
   }
 }
 
-// A wrong submission costs a heart and passes the bomb (solo: just a nudge).
-function failTurn(b, index, reason, now) {
-  b.typing = '';
-  if (b.solo) {
-    b.message = reason;
-    return;
-  }
-  const cur = b.order[b.turnIdx];
-  b.lives[cur] = Math.max(0, (b.lives[cur] || 0) - 1);
-  b.message = `${reason} — 💔`;
-  if (b.lives[cur] <= 0) b.alive[cur] = false;
-  const remaining = b.order.filter((id) => b.alive[id]);
-  if (remaining.length <= 1) {
-    b.phase = 'over';
-    b.winnerId = remaining[0] || null;
-    b.turnEndsAt = null;
-    return;
-  }
-  advanceTurn(b);
-  b.syllable = pickSyllable(index.tiers, b.level);
-  b.turnEndsAt = now + b.turnMs;
-}
-
-/** Returns true if the word was accepted. Otherwise sets b.message and returns false. */
+/**
+ * Returns true if the word was accepted. An invalid word only shows a message
+ * and lets the player keep trying — a heart is lost only when the timer runs
+ * out (handled in timeoutTick).
+ */
 export function submitWord(b, index, playerId, raw, now = Date.now()) {
   if (b.phase !== 'playing') return false;
   if (b.order[b.turnIdx] !== playerId) return false;
   const word = index.norm(raw || '');
   if (!word) return false;
   if (!word.includes(b.syllable)) {
-    failTurn(b, index, `The word must contain “${b.syllable}”`, now);
+    b.message = `The word must contain “${b.syllable}”`;
     return false;
   }
   if (b.used.has(word)) {
-    failTurn(b, index, 'Word already used!', now);
+    b.message = 'Word already used!';
     return false;
   }
   if (!index.dict.has(word)) {
-    failTurn(b, index, `“${String(raw).trim()}” isn't in the dictionary`, now);
+    b.message = `“${String(raw).trim()}” isn't in the dictionary`;
     return false;
   }
   b.used.add(word);
