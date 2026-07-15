@@ -72,7 +72,7 @@ export async function setPresence(detail: string): Promise<void> {
       activity: {
         details: 'by KYROX 🐾',
         state: detail,
-        assets: { large_image: 'embedded_cover', large_text: 'Pawmodoro' },
+        assets: { large_image: 'embedded_cover', large_text: 'StudySouk Timer' },
         timestamps: { start: Date.now() },
       },
     });

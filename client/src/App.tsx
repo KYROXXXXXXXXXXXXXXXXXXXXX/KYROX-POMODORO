@@ -35,10 +35,10 @@ function tiltReset(e: React.MouseEvent<HTMLElement>) {
 function Header({ theme, onToggleTheme }: { theme?: Theme; onToggleTheme?: () => void }) {
   return (
     <header className="header">
-      <img className="logo" src="/logo.png" alt="StudySouk Academy" />
+      <img className="logo" src="/logo.png" alt="StudySouk Timer" />
       <div className="wordmark">
         <span className="wm-title">StudySouk</span>
-        <span className="wm-sub">#Academy</span>
+        <span className="wm-sub">Timer</span>
         <span className="by-kyrox">by KYROX</span>
       </div>
       {onToggleTheme && theme && (
@@ -79,7 +79,7 @@ function Loading() {
       <div className="load-title">
         Study<span>Souk</span>
       </div>
-      <div className="load-sub">#ACADEMY · BY KYROX</div>
+      <div className="load-sub">TIMER · BY KYROX</div>
       <div className="load-bar">
         <span />
       </div>
