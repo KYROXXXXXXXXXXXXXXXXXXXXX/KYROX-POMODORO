@@ -37,7 +37,7 @@ export async function authenticateUser(): Promise<Me> {
     response_type: 'code',
     state: '',
     prompt: 'none',
-    scope: ['identify'],
+    scope: ['identify', 'rpc.activities.write'],
   });
 
   const res = await fetch('/api/token', {
@@ -54,4 +54,29 @@ export async function authenticateUser(): Promise<Me> {
     id: String(u.id ?? getInstanceId()),
     name: String(u.global_name || u.username || 'Guest'),
   };
+}
+
+// Rich Presence: the subtitle Discord shows under the activity name in the
+// member list / profile (e.g. "by KYROX · Focusing"). Requires the 'rpc.activities.write'
+// scope; silently ignored if the platform/scope isn't available.
+let presenceReady = false;
+export async function setPresence(detail: string): Promise<void> {
+  const sdk = discordSdk;
+  if (!sdk) return;
+  try {
+    if (!presenceReady) {
+      await sdk.ready();
+      presenceReady = true;
+    }
+    await sdk.commands.setActivity({
+      activity: {
+        details: 'by KYROX 🐾',
+        state: detail,
+        assets: { large_image: 'embedded_cover', large_text: 'Pawmodoro' },
+        timestamps: { start: Date.now() },
+      },
+    });
+  } catch {
+    /* presence isn't critical — ignore if unavailable */
+  }
 }

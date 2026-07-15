@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { inDiscord, getInstanceId, authenticateUser, type Me } from './discordSdk';
+import { inDiscord, getInstanceId, authenticateUser, setPresence, type Me } from './discordSdk';
 import { useGameSync, type Player, type View } from './useGameSync';
 import { Pomodoro } from './Pomodoro';
 import { WordBomb } from './WordBomb';
@@ -193,6 +193,13 @@ export default function App() {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem('ss-theme', theme);
   }, [theme]);
+
+  // Discord Rich Presence subtitle ("by KYROX 🐾 · <what you're doing>").
+  useEffect(() => {
+    const label =
+      view === 'pomodoro' ? 'Focusing' : view === 'wordbomb' ? 'Playing Word Bomb' : 'In the lobby';
+    setPresence(label);
+  }, [view]);
 
   // Upgrade the guest name to the real Discord name in the background.
   useEffect(() => {
