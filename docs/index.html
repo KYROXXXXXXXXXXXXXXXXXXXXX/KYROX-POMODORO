@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>StudySouk #Academy — Legal</title>
+    <style>
+      :root {
+        --bg: #0a0c13;
+        --card: rgba(255, 255, 255, 0.04);
+        --line: rgba(255, 255, 255, 0.1);
+        --text: #e7e9f2;
+        --dim: #8b90a5;
+        --accent: #7c5cff;
+        --accent2: #ff5c8a;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        background:
+          radial-gradient(52% 42% at 18% -6%, rgba(124, 92, 255, 0.16), transparent 70%),
+          radial-gradient(46% 38% at 88% 12%, rgba(255, 92, 138, 0.1), transparent 70%),
+          var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        padding: 30px;
+      }
+      .brand {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: var(--dim);
+      }
+      h1 {
+        font-size: 34px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        margin: 4px 0 20px;
+        background: linear-gradient(92deg, #fff 10%, #c9beff 55%, var(--accent2));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .links { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+      a.link {
+        text-decoration: none;
+        padding: 14px 26px;
+        border-radius: 14px;
+        font-weight: 700;
+        color: #fff;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        box-shadow: 0 6px 22px rgba(124, 92, 255, 0.35);
+      }
+      a.link.ghost {
+        background: var(--card);
+        border: 1px solid var(--line);
+        box-shadow: none;
+        color: var(--text);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="brand">StudySouk #Academy · by KYROX</div>
+    <h1>Legal</h1>
+    <div class="links">
+      <a class="link" href="terms.html">Terms of Service</a>
+      <a class="link ghost" href="privacy.html">Privacy Policy</a>
+    </div>
+  </body>
+</html>
