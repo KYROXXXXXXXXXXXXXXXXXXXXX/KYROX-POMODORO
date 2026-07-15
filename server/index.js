@@ -87,6 +87,9 @@ if (!fs.existsSync(path.join(clientDist, 'index.html'))) {
   console.warn('[warn] client/dist introuvable — lance `npm run build` avant `npm start`.');
 }
 app.use(express.static(clientDist));
+// Clean legal-page URLs (required for Discord app verification).
+app.get('/terms', (_req, res) => res.sendFile(path.join(clientDist, 'terms.html')));
+app.get('/privacy', (_req, res) => res.sendFile(path.join(clientDist, 'privacy.html')));
 app.get('*', (_req, res) => res.sendFile(path.join(clientDist, 'index.html')));
 
 // ===========================================================================
